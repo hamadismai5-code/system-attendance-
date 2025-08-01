@@ -1,12 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>system attendance</title>
-    <link rel="stylesheet" href="style.css"> 
+  <meta charset="UTF-8">
+  <title>Attendance System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>hy</h1>
+  <main class="container">
+    <header>
+      <h1>Attendance System</h1>
+    </header>
+    <section class="attendance-section">
+      <form id="attendance-form" autocomplete="off">
+        <div class="form-group">
+          <label for="name">Name</label>
+          <input type="text" id="name" placeholder="Enter Name" required />
+        </div>
+        
+        <div class="form-group">
+          <label for="department">Department</label>
+          <select id="department" required>
+            <option value="">Select Department</option>
+            <option value="Employee">Employee</option>
+            <option value="Marketing">Marketing</option>
+            <option value="Field Student">Field Student</option>
+            <option value="Entrance">Entrance</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-primary">Mark Attendance</button>
+      </form>
+    </section>
+    <section class="message-section">
+      <div id="message"></div>
+    </section>
+
+    <section class="log-section">
+      <h2>Attendance Log</h2>
+      <div class="table-responsive">
+        <table id="attendance-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Department</th>
+              <th>Date</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script src="script.js"></script>
 </body>
 </html>
