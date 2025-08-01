@@ -1,52 +1,75 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("attendance-form");
-  const nameInput = document.getElementById("name");
-  const departmentInput = document.getElementById("department");
-  const tableBody = document.getElementById("attendance-table").querySelector("tbody");
 
-  form.addEventListener("submit", function(e) {
-    e.preventDefault();
+const form = document.getElementById('attendance-form');
+const messageDiv = document.getElementById('message');
+const attendanceTableBody = document.querySelector('#attendance-table tbody');
 
-    const name = nameInput.value.trim();
-    const department = departmentInput.value;
-    const now = new Date();
-    const date = now.toLocaleDateString();
-    const time = now.toLocaleTimeString();
+const attendanceRecords = {}; // key = name + department + date
 
-    // Enhanced validation
-    if (!name || !department) {
-      showMessage("Please fill all fields!", "error");
-      return;
-    }
+function formatDate(date) {
+  return date.toISOString().split('T')[0];
+}
 
-    // Add new row
-    const row = tableBody.insertRow();
-    row.insertCell(0).innerText = name;
-    row.insertCell(1).innerText = department;
-    row.insertCell(2).innerText = date;
-    row.insertCell(3).innerText = time;
+function formatTime(date) {
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
 
-    // Reset form and focus name input
-    form.reset();
-    nameInput.focus();
+form.addEventListener('submit', function(e) {
+  e.preventDefault();
 
-    showMessage("Attendance marked!", "success");
-  });
+  const name = document.getElementById('name').value.trim();
+  const department = document.getElementById('department').value;
+  const now = new Date();
+  const today = formatDate(now);
 
-  // Simple feedback message
-  function showMessage(msg, type) {
-    let msgDiv = document.getElementById("form-message");
-    if (!msgDiv) {
-      msgDiv = document.createElement("div");
-      msgDiv.id = "form-message";
-      form.parentNode.insertBefore(msgDiv, form);
-    }
-    msgDiv.style.display = "block";
-    msgDiv.textContent = msg;
-    msgDiv.style.color = type === "success" ? "#28a745" : "#d9534f";
-    setTimeout(() => {
-      msgDiv.textContent = "";
-      msgDiv.style.display = "none";
-    }, 1800);
+  if (!name || !department) {
+    messageDiv.textContent = "Please enter both name and department.";
+    messageDiv.style.color = 'red';
+    return;
   }
+
+  const key = `${name}_${department}_${today}`;
+
+  if (!attendanceRecords[key]) {
+    // First time entry - record Time In
+    attendanceRecords[key] = {
+      name,
+      department,
+      date: today,
+      timeIn: formatTime(now),
+      timeOut: ''
+    };
+
+    // Add row to table
+    const row = document.createElement('tr');
+    row.setAttribute('data-key', key);
+    row.innerHTML = `
+      <td>${name}</td>
+      <td>${department}</td>
+      <td>${today}</td>
+      <td class="time-in">${attendanceRecords[key].timeIn}</td>
+      <td class="time-out">--</td>
+    `;
+    attendanceTableBody.appendChild(row);
+
+    messageDiv.textContent = `Time In recorded for ${name} at ${attendanceRecords[key].timeIn}`;
+    messageDiv.style.color = 'green';
+  } else if (attendanceRecords[key] && attendanceRecords[key].timeOut === '') {
+    // Mark Time Out
+    attendanceRecords[key].timeOut = formatTime(now);
+
+    // Update row in table
+    const row = document.querySelector(`tr[data-key="${key}"]`);
+    if (row) {
+      row.querySelector('.time-out').textContent = attendanceRecords[key].timeOut;
+    }
+
+    messageDiv.textContent = `Time Out recorded for ${name} at ${attendanceRecords[key].timeOut}`;
+    messageDiv.style.color = 'green';
+  } else {
+    // Both Time In and Time Out already recorded
+    messageDiv.textContent = `Attendance for ${name} already completed today.`;
+    messageDiv.style.color = 'orange';
+  }
+
+  form.reset();
 });
