@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>form2</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="form1.css" />
   <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
 </head>
 <body>
@@ -34,22 +34,6 @@
     </form>
   </div>
 
-  <script>
-    const form = document.getElementById('loginForm');
-
-    form.addEventListener('submit', function(event) {
-      event.preventDefault(); // Zuia behavior ya form ya kawaida
-
-      const username = form.username.value;
-      const password = form.password.value;
-
-      if (username && password) {
-        // Redirect kwa mfano kwenye 'home.html'
-        window.location.href = "home.html";
-      } else {
-        alert("Tafadhali jaza username na password!");
-      }
-    });
-  </script>
+   <script src="form1.js"></script>
 </body>
 </html>
