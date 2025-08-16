@@ -10,7 +10,11 @@ body{
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background:url(lights2.jpg) no-repeat; 
+    background: -moz-linear-gradient(45deg, #4c72ec, #1a1a1a);
+    background: -webkit-linear-gradient(45deg, #4c72ec, #1a1a1a);
+    background: linear-gradient(45deg, #4c72ec, #1a1a1a);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
     background-size: cover;
     background-position: center;
 }
@@ -39,7 +43,7 @@ body{
 .wrapper .input-box{
     background: transparent;
     width: 100%;
-    height: 50px;
+    height: 46px;
     margin: 30px 0;
 }
 
@@ -124,20 +128,35 @@ body{
     transition: .3s ease;
 }
 
-.wrapper .register-link{
-    font-size: 14.5px;
-    text-align: center;
-    margin: 20px 0 15px;
-}
-
-.register-link p  a{
+.wrapper .input-box i {
+    position: absolute;
+    right: 20px;           /* Move icon closer to the input's edge */
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 22px;       /* Slightly larger for better visibility */
     color: #fff;
-    text-decoration: none;
-    font: weight 600px; 
+    opacity: 0.8;
+    pointer-events: none;  /* Allow clicks to pass through to input */
+    transition: color 0.2s;
 }
 
-.register-link p  a:hover{
-    text-decoration: underline;
-    color: #4c72ec;
+.Register-link {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 14px;
+  color: #faf6f6;
 }
+
+.Register-link a {
+  color: #fafcfd;
+  text-decoration: none;
+  font-weight: bold;
+  transition: color 0.3s ease;
+}
+
+.Register-link a:hover {
+  color: #005fa3;
+  text-decoration: underline;
+}
+
 

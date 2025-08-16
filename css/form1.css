@@ -1,0 +1,130 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Poppins, sans-serif;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(45deg, #4c72ec, #1a1a1a);
+    background-size: cover;
+    background-position: center;
+}
+
+.wrapper {
+    width: 100%;
+    background: transparent;
+    border: 2px solid rgba(255, 255, 255, .2);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 0 20px rgba(0, 0, 0, .2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    max-width: 400px;
+    margin: 0 auto;
+    color: #fff;
+    border-radius: 18px;
+    padding: 30px;
+}
+
+.wrapper h1 {
+    font-size: 36px;
+    text-align: center;
+}
+
+.input-box {
+    position: relative;
+    background: transparent;
+    width: 100%;
+    height: 50px;
+    margin: 30px 0;
+}
+
+.input-box input {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    border: 2px solid rgba(255, 255, 255, .2);
+    border-radius: 40px;
+    font-size: 17px;
+    color: #fff;
+    padding: 20px 45px 20px 20px;
+}
+
+.input-box input:focus + i {
+    color: #ffd700;
+}
+
+.input-box input::placeholder {
+    color: #fff;
+}
+
+.input-box i {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 22px;
+    color: #fff;
+    opacity: 0.8;
+    pointer-events: none;
+    transition: color 0.2s;
+}
+
+.wrapper .btn {
+    width: 100%;
+    height: 45px;
+    background: #fff;
+    border: none;
+    outline: none;
+    border-radius: 40px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, .1);
+    cursor: pointer;
+    font-size: 16px;
+    color: #333;
+    font-weight: 600;
+}
+
+.btn:hover {
+    background: #4c72ec;
+    color: #fff;
+    transition: .3s ease;
+}
+
+.forget-password {
+    margin-top: 12px;
+    text-align: left;
+    font-size: 14px;
+    color: #eef0f1;
+}
+
+.forget-password a {
+    color: #eef0f1;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease, text-decoration 0.3s ease;
+    display: inline-block;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.forget-password a:hover,
+.forget-password a:focus {
+    color: #0b66a7;
+    text-decoration: underline;
+    outline: none;
+}
+
+.forget-password a:active {
+    color: #0b66a7;
+    text-decoration: none;
+    outline: none;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+}
