@@ -493,7 +493,7 @@ $notifications_result->free();
       <h2>Admin Panel</h2>
       <ul>
         <li class="active"><a href="#"><i class='bx bxs-dashboard'></i><span> Dashboard</span></a></li>
-        <li><a href="attendance.php"><i class='bx bxs-time'></i><span> Attendance</span></a></li>
+        <li><a href="my_attendance.php"><i class='bx bxs-time'></i><span> My Attendance</span></a></li>
         <li><a href="users.php"><i class='bx bxs-user'></i><span> Users</span></a></li>
         <li><a href="departments.php"><i class='bx bxs-building'></i><span> Departments</span></a></li>
         <li><a href="reports.php"><i class='bx bxs-report'></i><span> Reports</span></a></li>

@@ -311,7 +311,7 @@ $attendance_data = $result->fetch_all(MYSQLI_ASSOC);
       </div>
       <ul class="admin-menu">
         <li><a href="admin_dashboard.php"><i class='bx bxs-dashboard'></i> Dashboard</a></li>
-        <li><a href="attendance.php"><i class='bx bxs-time'></i> Attendance</a></li>
+        <li><a href="my_attendance.php"><i class='bx bxs-time'></i> My Attendance</a></li>
         <li><a href="users.php"><i class='bx bxs-user'></i> Users</a></li>
         <li><a href="departments.php"><i class='bx bxs-building'></i> Departments</a></li>
         <li class="active"><a href="reports.php"><i class='bx bxs-report'></i> Reports</a></li>
