@@ -48,7 +48,10 @@ if (isset($_GET['delete'])) {
     header("Location: departments.php");
     exit();
 }
+// Include admin header if any
+include 'admin_header.php';
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -150,7 +153,7 @@ if (isset($_GET['delete'])) {
     /* Main Content */
     .admin-content {
       flex: 1;
-      margin-left: 240px;
+      margin-left: 120px;
       padding: 20px;
       transition: var(--transition);
     }
@@ -306,26 +309,11 @@ if (isset($_GET['delete'])) {
 </head>
 <body>
   <div class="admin-container">
-    <aside class="admin-sidebar">
-      <div class="admin-logo">
-        <h2>Admin Panel</h2>
-      </div>
-      <ul class="admin-menu">
-        <li><a href="admin_dashboard.php"><i class='bx bxs-dashboard'></i> Dashboard</a></li>
-        <li><a href="my_attendance.php"><i class='bx bxs-time'></i> My Attendance</a></li>
-        <li><a href="users.php"><i class='bx bxs-user'></i> Users</a></li>
-        <li class="active"><a href="departments.php"><i class='bx bxs-building'></i> Departments</a></li>
-        <li><a href="reports.php"><i class='bx bxs-report'></i> Reports</a></li>
-        <li><a href="analytics.php"><i class='bx bxs-analyse'></i> Analytics</a></li>
-        <li><a href="logout.php"><i class='bx bxs-log-out'></i> Logout</a></li>
-      </ul>
-    </aside>
-
     <main class="admin-content">
       <header class="admin-header">
         <h1>Department Management</h1>
         <div class="admin-user">
-          <span>Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></span>
+         
         </div>
       </header>
 

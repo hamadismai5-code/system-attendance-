@@ -73,17 +73,18 @@ if (isset($_GET['delete'])) {
     header("Location: users.php");
     exit();
 }
+
+// Include admin header if any
+include 'admin_header.php';
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<!-- Badilisha sehemu ya <head> kuwa kama hii -->
 <head>
   <meta charset="UTF-8">
   <title>Admin Panel - Users</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-  <link rel="stylesheet" href="css/admin.css">
   <style>
     :root {
       --primary: #3b82f6;
@@ -95,29 +96,34 @@ if (isset($_GET['delete'])) {
       --gray: #6b7280;
       --light: #f3f4f6;
       --white: #ffffff;
-      --shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      --border: #e5e7eb;
       --radius: 12px;
       --transition: all 0.3s ease;
+      --shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
-    
+
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      outline: none;
+      border: none;
+      text-decoration: none;
+      list-style: none;
     }
-    
+
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: var(--light);
+      background: var(--light);
       color: var(--dark);
       line-height: 1.5;
     }
-    
+
     .admin-container {
       display: flex;
       min-height: 100vh;
     }
-    
+
     /* Sidebar */
     .admin-sidebar {
       width: 240px;
@@ -130,23 +136,23 @@ if (isset($_GET['delete'])) {
       z-index: 100;
       overflow-y: auto;
     }
-    
+
     .admin-sidebar h2 {
       text-align: center;
       margin-bottom: 30px;
       font-weight: 700;
       font-size: 1.5rem;
     }
-    
+
     .admin-sidebar ul {
       list-style: none;
       padding: 0;
     }
-    
+
     .admin-sidebar ul li {
       margin: 5px 15px;
     }
-    
+
     .admin-sidebar ul li a {
       display: flex;
       align-items: center;
@@ -156,30 +162,30 @@ if (isset($_GET['delete'])) {
       border-radius: 8px;
       transition: var(--transition);
     }
-    
-    .admin-sidebar ul li a:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: var(--white);
-    }
-    
-    .admin-sidebar ul li.active a {
-      background: var(--primary);
-      color: var(--white);
-    }
-    
+
     .admin-sidebar ul li a i {
       font-size: 1.2rem;
       margin-right: 10px;
     }
-    
-    /* Main Content */
+
+    .admin-sidebar ul li a:hover {
+      background: rgba(255,255,255,0.1);
+      color: var(--white);
+    }
+
+    .admin-sidebar ul li.active a {
+      background: var(--primary);
+      color: var(--white);
+    }
+
+    /* Main content */
     .admin-content {
       flex: 1;
-      margin-left: 240px;
+      margin-left: 124px;
       padding: 20px;
       transition: var(--transition);
     }
-    
+
     /* Header */
     .admin-header {
       display: flex;
@@ -187,25 +193,25 @@ if (isset($_GET['delete'])) {
       align-items: center;
       margin-bottom: 25px;
       padding-bottom: 15px;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid var(--border);
     }
-    
+
     .admin-header h1 {
       font-size: 1.8rem;
-      color: var(--dark);
       font-weight: 700;
+      color: var(--dark);
     }
-    
-    .admin-user {
+
+    .user-info {
       display: flex;
       align-items: center;
       gap: 10px;
     }
-    
-    .admin-user span {
+
+    .user-info span {
       font-weight: 500;
     }
-    
+
     .user-avatar {
       width: 40px;
       height: 40px;
@@ -218,122 +224,161 @@ if (isset($_GET['delete'])) {
       font-weight: 700;
       font-size: 1.1rem;
     }
-    
-    /* User Management */
-    .user-management {
-      display: grid;
-      gap: 20px;
-    }
-    
+
+    /* Cards & Forms */
     .user-form {
       background: var(--white);
-      padding: 20px;
       border-radius: var(--radius);
       box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 25px;
     }
-    
+
     .user-form h3 {
-      font-size: 1.2rem;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--dark);
       margin-bottom: 15px;
     }
-    
-    .user-form input {
+
+    .user-form input, .user-form button {
       width: 100%;
-      padding: 10px 15px;
-      border: 1px solid #3d3e3fff;
       border-radius: 6px;
+      padding: 10px 15px;
+      border: 1px solid var(--border);
       margin-bottom: 10px;
+      font-size: 1rem;
+      transition: var(--transition);
+      color: var(--dark);
     }
-    
+
     .user-form label {
       display: flex;
       align-items: center;
+      margin: 10px 0;
       gap: 8px;
-      margin-bottom: 15px;
-      cursor: pointer;
+      font-weight: 500;
+      color: var(--dark);
+
     }
-    
+
     .user-form button {
       background: var(--primary);
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      border-radius: 6px;
-      cursor: pointer;
+      color: var(--white);
       font-weight: 600;
+      border: none;
+      cursor: pointer;
       transition: var(--transition);
+      margin-top: 10px;
     }
-    
+
     .user-form button:hover {
       background: var(--primary-dark);
     }
-    
-    .table-responsive {
+
+    /* Table */
+    .table-container {
       overflow-x: auto;
-    }
-    
-    .user-table {
-      width: 100%;
-      border-collapse: collapse;
-      background: var(--white);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-      overflow: hidden;
+      background: var(--white);
+      padding: 15px;
     }
-    
-    .user-table th, 
-    .user-table td {
-      text-align: left;
-      padding: 12px 15px;
-      border-bottom: 1px solid #e5e7eb;
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
     }
-    
-    .user-table th {
+
+    thead th {
+      background: var(--light);
+      color: var(--gray);
       font-size: 0.8rem;
       text-transform: uppercase;
-      color: var(--gray);
-      font-weight: 600;
-      background: var(--light);
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
     }
-    
-    .user-table tr:last-child td {
+
+    tbody td {
+      padding: 12px 15px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody tr:last-child td {
       border-bottom: none;
     }
-    
+
+    /* Buttons */
+    .btn-edit, .btn-delete {
+      padding: 6px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: var(--transition);
+      display: inline-block;
+    }
+
     .btn-edit {
-      color: var(--primary);
-      text-decoration: none;
-      margin-right: 10px;
+      background: var(--primary);
+      color: var(--white);
+      margin-right: 5px;
     }
-    
+
+    .btn-edit:hover {
+      background: var(--primary-dark);
+    }
+
     .btn-delete {
-      color: var(--danger);
-      text-decoration: none;
+      background: var(--danger);
+      color: var(--white);
     }
-    
-    .btn-edit:hover, 
+
     .btn-delete:hover {
-      text-decoration: underline;
+      background: #dc2626;
     }
-    
+
+    /* Alerts */
     .alert {
-      padding: 15px;
+      padding: 12px 15px;
+      border-radius: 8px;
       margin-bottom: 20px;
-      border-radius: var(--radius);
+      font-weight: 500;
     }
-    
+
     .alert-success {
-      background: #d1fae5;
+      background: #ecfdf5;
       color: #065f46;
+      border: 1px solid #a7f3d0;
     }
-    
+
     .alert-danger {
-      background: #fee2e2;
-      color: #b91c1c;
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
     }
-    
+
+    /* Role badges */
+    .role-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .role-admin {
+      background: #fffbeb;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+
+    .role-user {
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+
     /* Responsive */
     @media (max-width: 992px) {
       .admin-sidebar {
@@ -349,54 +394,45 @@ if (isset($_GET['delete'])) {
         margin-left: 80px;
       }
     }
-    
+
     @media (max-width: 768px) {
       .admin-header {
         flex-direction: column;
         align-items: flex-start;
       }
       
-      .admin-user {
+      .user-info {
         margin-top: 10px;
+      }
+      
+      .user-form {
+        padding: 15px;
       }
     }
   </style>
 </head>
-</head>
 <body>
   <div class="admin-container">
-    <aside class="admin-sidebar">
-      <div class="admin-logo">
-        <h2>Admin Panel</h2>
-      </div>
-      <ul class="admin-menu">
-        <li><a href="admin_dashboard.php"><i class='bx bxs-dashboard'></i> Dashboard</a></li>
-        <li><a href="my_attendance.php"><i class='bx bxs-time'></i> My Attendance</a></li>
-        <li class="active"><a href="users.php"><i class='bx bxs-user'></i> Users</a></li>
-        <li><a href="departments.php"><i class='bx bxs-building'></i> Departments</a></li>
-        <li><a href="reports.php"><i class='bx bxs-report'></i> Reports</a></li>
-        <li><a href="analytics.php"><i class='bx bxs-analyse'></i> Analytics</a></li>
-        <li><a href="logout.php"><i class='bx bxs-log-out'></i> Logout</a></li>
-      </ul>
-    </aside>
-
     <main class="admin-content">
       <header class="admin-header">
         <h1>User Management</h1>
-        <div class="admin-user">
-          <span>Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></span>
+        <div class="user-info">
+          <div class="user-avatar"><?php echo strtoupper(substr($_SESSION['username'], 0, 1)); ?></div>
+            
         </div>
       </header>
-      <!-- Sehemu ya juu kabla ya form -->
-<?php if (isset($_SESSION['message'])): ?>
-    <div class="alert alert-success"><?= $_SESSION['message'] ?></div>
-    <?php unset($_SESSION['message']); ?>
-<?php endif; ?>
+      
+      <!-- Notifications -->
+      <?php if (isset($_SESSION['message'])): ?>
+        <div class="alert alert-success"><?= $_SESSION['message'] ?></div>
+        <?php unset($_SESSION['message']); ?>
+      <?php endif; ?>
 
-<?php if (isset($_SESSION['error'])): ?>
-    <div class="alert alert-danger"><?= $_SESSION['error'] ?></div>
-    <?php unset($_SESSION['error']); ?>
-<?php endif; ?>
+      <?php if (isset($_SESSION['error'])): ?>
+        <div class="alert alert-danger"><?= $_SESSION['error'] ?></div>
+        <?php unset($_SESSION['error']); ?>
+      <?php endif; ?>
+      
       <div class="user-management">
         <!-- Fomu ya kuongeza mtumiaji -->
         <form method="POST" class="user-form">
@@ -411,7 +447,7 @@ if (isset($_GET['delete'])) {
         </form>
 
         <!-- Orodha ya watumiaji -->
-        <div class="table-responsive">
+        <div class="table-container">
           <table class="user-table">
             <thead>
               <tr>
@@ -428,10 +464,14 @@ if (isset($_GET['delete'])) {
                 <td><?= $user['id'] ?></td>
                 <td><?= htmlspecialchars($user['username']) ?></td>
                 <td><?= htmlspecialchars($user['email']) ?></td>
-                <td><?= $user['is_admin'] ? 'Admin' : 'User' ?></td>
+                <td>
+                  <span class="role-badge <?= $user['is_admin'] ? 'role-admin' : 'role-user' ?>">
+                    <?= $user['is_admin'] ? 'Admin' : 'User' ?>
+                  </span>
+                </td>
                 <td>
                   <a href="edit_user.php?id=<?= $user['id'] ?>" class="btn-edit">Edit</a>
-                  <a href="users.php?delete=<?= $user['id'] ?>" class="btn-delete" onclick="return confirm('Are you sure?')">Delete</a>
+                  <a href="users.php?delete=<?= $user['id'] ?>" class="btn-delete" onclick="return confirm('Are you sure you want to delete this user?')">Delete</a>
                 </td>
               </tr>
               <?php endforeach; ?>

@@ -48,7 +48,11 @@ $result = $conn->query("SELECT department,
                         WHERE time_out IS NOT NULL
                         GROUP BY department");
 $analytics['average_hours'] = $result->fetch_all(MYSQLI_ASSOC);
+
+// Include admin header if any
+include 'admin_header.php';
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -267,27 +271,11 @@ $analytics['average_hours'] = $result->fetch_all(MYSQLI_ASSOC);
 </head>
 </head>
 <body>
-  <div class="admin-container">
-    <aside class="admin-sidebar">
-      <div class="admin-logo">
-        <h2>Admin Panel</h2>
-      </div>
-      <ul class="admin-menu">
-        <li><a href="admin_dashboard.php"><i class='bx bxs-dashboard'></i> Dashboard</a></li>
-        <li><a href="my_attendance.php"><i class='bx bxs-time'></i>My  Attendance</a></li>
-        <li><a href="users.php"><i class='bx bxs-user'></i> Users</a></li>
-        <li><a href="departments.php"><i class='bx bxs-building'></i> Departments</a></li>
-        <li><a href="reports.php"><i class='bx bxs-report'></i> Reports</a></li>
-        <li class="active"><a href="analytics.php"><i class='bx bxs-analyse'></i> Analytics</a></li>
-        <li><a href="logout.php"><i class='bx bxs-log-out'></i> Logout</a></li>
-      </ul>
-    </aside>
-
-    <main class="admin-content">
+  <main class="admin-content" style="margin-left:0;">
       <header class="admin-header">
         <h1>Attendance Analytics</h1>
         <div class="admin-user">
-          <span>Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></span>
+        
         </div>
       </header>
 
@@ -363,7 +351,6 @@ $analytics['average_hours'] = $result->fetch_all(MYSQLI_ASSOC);
             </table>
         </div>
       </div>
-    </main>
-  </div>
+  </main>
 </body>
 </html>

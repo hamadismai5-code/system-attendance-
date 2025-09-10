@@ -1,28 +1,17 @@
 <?php
 session_start();
 include 'config.php';
+include 'session_check.php';
 
-// Check login
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
-    exit();
-}
-
-// Check if admin
-$stmt = $conn->prepare("SELECT is_admin FROM users WHERE username = ?");
-$stmt->bind_param("s", $_SESSION['username']);
-$stmt->execute();
-$stmt->bind_result($is_admin);
-$stmt->fetch();
-$stmt->close();
-
-if (!$is_admin) {
+// Check login and admin status
+validateSession();
+if (!isAdminUser()) {
     header("Location: attendance.php");
     exit();
 }
 
 // ==================== Optimized Data Fetching ====================
-// Use a single query for general stats to reduce database calls
+// General stats
 $stats_query = "SELECT 
     (SELECT COUNT(DISTINCT name) FROM attendance) as total_users,
     (SELECT COUNT(*) FROM attendance) as total_records,
@@ -31,7 +20,7 @@ $stats_query = "SELECT
 $stats_result = $conn->query($stats_query);
 $stats = $stats_result->fetch_assoc();
 
-// Department stats with optimized query
+// Department stats
 $dept_stats_query = "SELECT d.name as department, COUNT(a.id) as count 
                     FROM departments d 
                     LEFT JOIN attendance a ON d.id = a.department AND a.date = CURDATE()
@@ -39,7 +28,7 @@ $dept_stats_query = "SELECT d.name as department, COUNT(a.id) as count
 $dept_stats_result = $conn->query($dept_stats_query);
 $dept_stats = $dept_stats_result->fetch_all(MYSQLI_ASSOC);
 
-// Recent attendance with limit
+// Recent attendance
 $recent_attendance_query = "SELECT a.name, d.name as department, a.date, a.time_in, a.time_out 
                            FROM attendance a
                            JOIN departments d ON a.department = d.id
@@ -47,7 +36,7 @@ $recent_attendance_query = "SELECT a.name, d.name as department, a.date, a.time_
 $recent_attendance_result = $conn->query($recent_attendance_query);
 $recent_attendance = $recent_attendance_result->fetch_all(MYSQLI_ASSOC);
 
-// Weekly trend with optimized query
+// Weekly trend
 $weekly_trend_query = "SELECT DATE(date) as day, COUNT(DISTINCT name) as users 
                       FROM attendance 
                       WHERE date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
@@ -56,7 +45,7 @@ $weekly_trend_query = "SELECT DATE(date) as day, COUNT(DISTINCT name) as users
 $weekly_trend_result = $conn->query($weekly_trend_query);
 $weekly_trend = $weekly_trend_result->fetch_all(MYSQLI_ASSOC);
 
-// Top performers with optimized query
+// Top performers
 $top_performers_query = "SELECT name, COUNT(*) as attendance_count 
                          FROM attendance 
                          WHERE date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
@@ -66,7 +55,7 @@ $top_performers_query = "SELECT name, COUNT(*) as attendance_count
 $top_performers_result = $conn->query($top_performers_query);
 $top_performers = $top_performers_result->fetch_all(MYSQLI_ASSOC);
 
-// Notifications with optimized query
+// Notifications
 $notifications_query = "SELECT 'Users without department' as message, COUNT(*) as count 
                        FROM attendance 
                        WHERE department = 0 OR department IS NULL
@@ -77,23 +66,29 @@ $notifications_query = "SELECT 'Users without department' as message, COUNT(*) a
 $notifications_result = $conn->query($notifications_query);
 $notifications = $notifications_result->fetch_all(MYSQLI_ASSOC);
 
-// Free result sets to free memory
+// Free result sets
 $stats_result->free();
 $dept_stats_result->free();
 $recent_attendance_result->free();
 $weekly_trend_result->free();
 $top_performers_result->free();
 $notifications_result->free();
+
+// Include admin header if any
+include 'admin_header.php';
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Admin Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-  <link rel="stylesheet" href="css/admin.css">
-  <style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+
+    <!-- Boxicons -->
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <!-- Your admin CSS -->
+     <style>
     :root {
       --primary: #3b82f6;
       --primary-dark: #2563eb;
@@ -184,7 +179,7 @@ $notifications_result->free();
     /* Main Content */
     .admin-content {
       flex: 1;
-      margin-left: 240px;
+      margin-left: 100px;
       padding: 20px;
       transition: var(--transition);
     }
@@ -213,6 +208,7 @@ $notifications_result->free();
     
     .user-info span {
       font-weight: 500;
+      
     }
     
     .user-avatar {
@@ -341,6 +337,11 @@ $notifications_result->free();
     /* Table */
     .table-container {
       overflow-x: auto;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      background: var(--white);
+      padding: 15px;
+      margin-top: 10px;
     }
     
     table {
@@ -459,6 +460,7 @@ $notifications_result->free();
     @media (max-width: 768px) {
       .admin-stats {
         grid-template-columns: 1fr;
+
       }
       
       .admin-header {
@@ -488,304 +490,138 @@ $notifications_result->free();
   </style>
 </head>
 <body>
-  <div class="admin-container">
-    <aside class="admin-sidebar">
-      <h2>Admin Panel</h2>
-      <ul>
-        <li class="active"><a href="#"><i class='bx bxs-dashboard'></i><span> Dashboard</span></a></li>
-        <li><a href="my_attendance.php"><i class='bx bxs-time'></i><span> My Attendance</span></a></li>
-        <li><a href="users.php"><i class='bx bxs-user'></i><span> Users</span></a></li>
-        <li><a href="departments.php"><i class='bx bxs-building'></i><span> Departments</span></a></li>
-        <li><a href="reports.php"><i class='bx bxs-report'></i><span> Reports</span></a></li>
-        <li><a href="analytics.php"><i class='bx bxs-analyse'></i><span> Analytics</span></a></li>
-        <li><a href="settings.php"><i class='bx bxs-cog'></i><span> Settings</span></a></li>
-        <li><a href="logout.php"><i class='bx bxs-log-out'></i><span> Logout</span></a></li>
-      </ul>
-    </aside>
-    
-    <main class="admin-content">
-      <div class="admin-header">
-        <h1>Dashboard Overview</h1>
-        <div class="user-info">
-          <span>Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></span>
-          <div class="user-avatar"><?php echo strtoupper(substr($_SESSION['username'], 0, 1)); ?></div>
-        </div>
-      </div>
-      
-      <!-- Stats Cards -->
-      <section class="admin-stats">
-        <div class="stat-card">
-          <div class="stat-icon blue"><i class='bx bxs-user'></i></div>
-          <div class="stat-info">
-            <h3>Total Users</h3>
-            <p><?php echo $stats['total_users']; ?></p>
-          </div>
-        </div>
-        
-        <div class="stat-card">
-          <div class="stat-icon green"><i class='bx bxs-time-five'></i></div>
-          <div class="stat-info">
-            <h3>Total Records</h3>
-            <p><?php echo $stats['total_records']; ?></p>
-          </div>
-        </div>
-        
-        <div class="stat-card">
-          <div class="stat-icon amber"><i class='bx bxs-calendar-check'></i></div>
-          <div class="stat-info">
-            <h3>Present Today</h3>
-            <p><?php echo $stats['present_today']; ?></p>
-          </div>
-        </div>
-        
-        <div class="stat-card">
-          <div class="stat-icon red"><i class='bx bxs-chart'></i></div>
-          <div class="stat-info">
-            <h3>Today's Records</h3>
-            <p><?php echo $stats['today_records']; ?></p>
-          </div>
-        </div>
-      </section>
-      
-      <!-- Charts Section -->
-      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
-        <section class="dashboard-section">
-          <div class="section-header">
-            <h3>Weekly Attendance Trend</h3>
-            <a href="analytics.php">View Details <i class='bx bx-right-arrow-alt'></i></a>
-          </div>
-          <div class="chart-container">
-            <canvas id="weeklyTrendChart"></canvas>
-          </div>
-        </section>
-        
-        <section class="dashboard-section">
-          <div class="section-header">
-            <h3>Department Distribution</h3>
-            <a href="departments.php">Manage <i class='bx bx-right-arrow-alt'></i></a>
-          </div>
-          <div class="chart-container">
-            <canvas id="departmentChart"></canvas>
-          </div>
-        </section>
-      </div>
-      
-      <!-- Recent Attendance & Top Performers -->
-      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
-        <section class="dashboard-section">
-          <div class="section-header">
-            <h3>Recent Attendance</h3>
-            <a href="attendance.php">View All <i class='bx bx-right-arrow-alt'></i></a>
-          </div>
-          <div class="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Department</th>
-                  <th>Date</th>
-                  <th>Time In</th>
-                  <th>Time Out</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php foreach ($recent_attendance as $record): ?>
-                <tr>
-                  <td><?= htmlspecialchars($record['name']) ?></td>
-                  <td><?= htmlspecialchars($record['department']) ?></td>
-                  <td><?= $record['date'] ?></td>
-                  <td><?= $record['time_in'] ?></td>
-                  <td><?= $record['time_out'] ?: '--' ?></td>
-                </tr>
-                <?php endforeach; ?>
-              </tbody>
-            </table>
-          </div>
-        </section>
-        
-        <section class="dashboard-section">
-          <div class="section-header">
-            <h3>Top Performers</h3>
-            <a href="reports.php">View Report <i class='bx bx-right-arrow-alt'></i></a>
-          </div>
-          <div class="performers-list">
-            <?php foreach ($top_performers as $performer): ?>
-            <div class="performer-item">
-              <span class="performer-name"><?= htmlspecialchars($performer['name']) ?></span>
-              <span class="performer-count"><?= $performer['attendance_count'] ?> days</span>
-            </div>
-            <?php endforeach; ?>
-          </div>
-        </section>
-      </div>
-      
-      <!-- Notifications -->
-      <section class="dashboard-section">
-        <div class="section-header">
-          <h3>System Notifications</h3>
-        </div>
-        <div class="notifications">
-          <?php foreach ($notifications as $notification): ?>
-          <div class="notification-card">
-            <i class='bx <?= $notification['count'] > 0 ? 'bx-error' : 'bx-info-circle' ?> notification-icon <?= $notification['count'] > 0 ? 'warning' : 'info' ?>'></i>
-            <div class="notification-content">
-              <h4><?= $notification['message'] ?></h4>
-              <p><?= $notification['count'] ?> found</p>
-            </div>
-          </div>
-          <?php endforeach; ?>
-        </div>
-      </section>
-    </main>
+
+<main class="admin-content">
+  <div class="admin-header">
+    <h1>Dashboard Overview</h1>
   </div>
   
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    // Weekly Trend Chart
-    const weeklyTrendCtx = document.getElementById('weeklyTrendChart').getContext('2d');
-    const weeklyTrendChart = new Chart(weeklyTrendCtx, {
-      type: 'line',
-      data: {
-        labels: [
-          <?php 
-            $labels = [];
-            foreach ($weekly_trend as $day) {
-              $labels[] = "'" . date('D', strtotime($day['day'])) . "'";
-            }
-            echo implode(',', $labels);
-          ?>
-        ],
-        datasets: [{
-          label: 'Attendance',
-          data: [
-            <?php 
-              $data = [];
-              foreach ($weekly_trend as $day) {
-                $data[] = $day['users'];
-              }
-              echo implode(',', $data);
-            ?>
-          ],
-          borderColor: "#3b82f6",
-          backgroundColor: "rgba(59, 130, 246, 0.1)",
-          borderWidth: 3,
-          tension: 0.4,
-          fill: true,
-          pointBackgroundColor: "#3b82f6",
-          pointRadius: 4,
-          pointHoverRadius: 6
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: false
-          },
-          tooltip: {
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            titleFont: {
-              size: 14
-            },
-            bodyFont: {
-              size: 14
-            },
-            padding: 10,
-            cornerRadius: 4
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              precision: 0
-            },
-            grid: {
-              color: 'rgba(0, 0, 0, 0.05)'
-            }
-          },
-          x: {
-            grid: {
-              display: false
-            }
-          }
-        }
-      }
-    });
+  <!-- Stats Cards -->
+  <section class="admin-stats">
+    <div class="stat-card">
+      <div class="stat-icon blue"><i class='bx bxs-user'></i></div>
+      <div class="stat-info">
+        <h3>Total Users</h3>
+        <p><?php echo $stats['total_users']; ?></p>
+      </div>
+    </div>
     
-    // Department Chart
-    const departmentCtx = document.getElementById('departmentChart').getContext('2d');
-    const departmentChart = new Chart(departmentCtx, {
-      type: 'doughnut',
-      data: {
-        labels: [
-          <?php 
-            $labels = [];
-            foreach ($dept_stats as $dept) {
-              $labels[] = "'" . htmlspecialchars($dept['department']) . "'";
-            }
-            echo implode(',', $labels);
-          ?>
-        ],
-        datasets: [{
-          data: [
-            <?php 
-              $data = [];
-              foreach ($dept_stats as $dept) {
-                $data[] = $dept['count'];
-              }
-              echo implode(',', $data);
-            ?>
-          ],
-          backgroundColor: [
-            "#3b82f6",
-            "#10b981",
-            "#f59e0b",
-            "#ef4444",
-            "#6366f1",
-            "#f43f5e"
-          ],
-          borderWidth: 0,
-          hoverOffset: 4
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'right',
-            labels: {
-              boxWidth: 15,
-              padding: 15,
-              font: {
-                size: 12
-              }
-            }
-          },
-          tooltip: {
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            titleFont: {
-              size: 14
-            },
-            bodyFont: {
-              size: 14
-            },
-            padding: 10,
-            cornerRadius: 4
-          }
-        },
-        cutout: '70%'
-      }
-    });
+    <div class="stat-card">
+      <div class="stat-icon green"><i class='bx bxs-time-five'></i></div>
+      <div class="stat-info">
+        <h3>Total Records</h3>
+        <p><?php echo $stats['total_records']; ?></p>
+      </div>
+    </div>
     
-    // Add loading animation to charts
-    Chart.defaults.plugins.loading = {
-      mode: 'overlay',
-      color: '#3b82f6',
-      size: 50
-    };
-  </script>
+    <div class="stat-card">
+      <div class="stat-icon amber"><i class='bx bxs-calendar-check'></i></div>
+      <div class="stat-info">
+        <h3>Present Today</h3>
+        <p><?php echo $stats['present_today']; ?></p>
+      </div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="stat-icon red"><i class='bx bxs-chart'></i></div>
+      <div class="stat-info">
+        <h3>Today's Records</h3>
+        <p><?php echo $stats['today_records']; ?></p>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Charts Section -->
+  <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+    <section class="dashboard-section">
+      <div class="section-header">
+        <h3>Weekly Attendance Trend</h3>
+        <a href="analytics.php">View Details <i class='bx bx-right-arrow-alt'></i></a>
+      </div>
+      <div class="chart-container">
+        <canvas id="weeklyTrendChart"></canvas>
+      </div>
+    </section>
+    
+    <section class="dashboard-section">
+      <div class="section-header">
+        <h3>Department Distribution</h3>
+        <a href="departments.php">Manage <i class='bx bx-right-arrow-alt'></i></a>
+      </div>
+      <div class="chart-container">
+        <canvas id="departmentChart"></canvas>
+      </div>
+    </section>
+  </div>
+  
+  <!-- Recent Attendance & Top Performers -->
+  <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+    <section class="dashboard-section">
+      <div class="section-header">
+        <h3>Recent Attendance</h3>
+        <a href="attendance.php">View All <i class='bx bx-right-arrow-alt'></i></a>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Department</th>
+              <th>Date</th>
+              <th>Time In</th>
+              <th>Time Out</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($recent_attendance as $record): ?>
+            <tr>
+              <td><?= htmlspecialchars($record['name']) ?></td>
+              <td><?= htmlspecialchars($record['department']) ?></td>
+              <td><?= $record['date'] ?></td>
+              <td><?= $record['time_in'] ?></td>
+              <td><?= $record['time_out'] ?: '--' ?></td>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    
+    <section class="dashboard-section">
+      <div class="section-header">
+        <h3>Top Performers</h3>
+        <a href="reports.php">View Report <i class='bx bx-right-arrow-alt'></i></a>
+      </div>
+      <div class="performers-list">
+        <?php foreach ($top_performers as $performer): ?>
+        <div class="performer-item">
+          <span class="performer-name"><?= htmlspecialchars($performer['name']) ?></span>
+          <span class="performer-count"><?= $performer['attendance_count'] ?> days</span>
+        </div>
+        <?php endforeach; ?>
+      </div>
+    </section>
+  </div>
+  
+  <!-- Notifications -->
+  <section class="dashboard-section">
+    <div class="section-header">
+      <h3>System Notifications</h3>
+    </div>
+    <div class="notifications">
+      <?php foreach ($notifications as $notification): ?>
+      <div class="notification-card">
+        <i class='bx <?= $notification['count'] > 0 ? 'bx-error' : 'bx-info-circle' ?> notification-icon <?= $notification['count'] > 0 ? 'warning' : 'info' ?>'></i>
+        <div class="notification-content">
+          <h4><?= $notification['message'] ?></h4>
+          <p><?= $notification['count'] ?> found</p>
+        </div>
+      </div>
+      <?php endforeach; ?>
+    </div>  
+  </section>
+</main>
+
+<?php include 'admin_footer.php'; ?>
 </body>
 </html>
