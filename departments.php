@@ -244,24 +244,26 @@ include 'admin_header.php';
       width: 100%;
       border-collapse: collapse;
       background: var(--white);
-      border-radius: var(--radius);
+      border-radius: 5px;
       box-shadow: var(--shadow);
       overflow: hidden;
     }
     
     .department-table th, 
     .department-table td {
-      text-align: left;
+      text-align: center;
       padding: 12px 15px;
       border-bottom: 1px solid #e5e7eb;
     }
     
-    .department-table th {
+   .department-table th {
       font-size: 0.8rem;
       text-transform: uppercase;
-      color: var(--gray);
-      font-weight: 600;
-      background: var(--light);
+      color: var(--white);
+      font-weight: 700;
+      background: var(--primary);
+      letter-spacing: 1px;
+      border-bottom: 2px solid var(--primary-dark);
     }
     
     .department-table tr:last-child td {

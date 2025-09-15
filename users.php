@@ -254,11 +254,17 @@ include 'admin_header.php';
     .user-form label {
       display: flex;
       align-items: center;
-      margin: 10px 0;
-      gap: 8px;
-      font-weight: 500;
+      margin: 14px 0 8px 0;
+      gap: 10px;
+      font-weight: 600;
       color: var(--dark);
-
+      font-size: 1rem;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .user-form label:hover,
+    .user-form label:focus-within {
+      color: var(--primary);
     }
 
     .user-form button {
@@ -290,13 +296,13 @@ include 'admin_header.php';
     }
 
     thead th {
-      background: var(--light);
-      color: var(--gray);
       font-size: 0.8rem;
       text-transform: uppercase;
-      padding: 12px 15px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
+      color: var(--white);
+      font-weight: 700;
+      background: var(--primary);
+      letter-spacing: 1px;
+      border-bottom: 2px solid var(--primary-dark);
     }
 
     tbody td {

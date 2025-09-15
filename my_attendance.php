@@ -76,7 +76,7 @@ include 'admin_header.php';
     <title>Admin Attendance Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    <style>
+  <style>
     :root {
       --primary: #3b82f6;
       --primary-dark: #2563eb;
@@ -87,112 +87,248 @@ include 'admin_header.php';
       --gray: #6b7280;
       --light: #f3f4f6;
       --white: #ffffff;
-      --border: #e5e7eb;
+      --shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
       --radius: 12px;
       --transition: all 0.3s ease;
-      --shadow: 0 4px 6px rgba(0,0,0,0.05);
- }
-
-        /* ================= RESET ================= */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            outline: none;
-            border: none;
-            text-decoration: none;
-            list-style: none;
-        }
-        body {
-           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-           background: var(--light);
-           color: var(--dark);
-           line-height: 1.5;
     }
-        /* ================= SIDEBAR ================= */
-         /* .admin-sidebar {
-            width: 240px;
-            background: var(--dark);
-            color: var(--white);
-            position: fixed;
-            height: 100vh;
-            padding-top: 20px;
-            overflow-y: auto;
-            z-index: 1000;
-        }
-        .admin-sidebar h2 {
-            text-align: center;
-            margin-bottom: 30px;
-            font-weight: 700;
-            font-size: 1.5rem;
-        }
-        .admin-sidebar ul {
-            list-style: none;
-            padding: 0;
-        }
-        .admin-sidebar ul li {
-            margin: 5px 15px;
-        }
-        .admin-sidebar ul li a {
-            display: flex;
-            align-items: center;
-            padding: 12px 15px;
-            color: #d1d5db;
-            text-decoration: none;
-            border-radius: 8px;
-            transition: var(--transition);
-        }
-        .admin-sidebar ul li a i {
-            font-size: 1.3rem;
-            margin-right: 10px;
-        }
-        .admin-sidebar ul li a:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-        }
-        .admin-sidebar ul li.active a {
-            background: var(--primary);
-            color: #ffffff;
-        }  */
-        /* ================= MAIN CONTENT ================= */
-        /* .admin-content {
-            margin-left: 230px;
-            padding: 10px;
-            width: calc(100% - 230px);
-            height: 100vh;
-            overflow-y: auto;
-
-        } */
-        /* ================= HEADER ================= */
-       .admin-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .admin-header h1 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--dark);
-        }
-        
-        .admin-user {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-            color: var(--gray);
-        }
-        /* ================= MONTH CARDS ================= */
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--light);
+      color: var(--dark);
+      line-height: 1.5;
+    }
+    
+    .admin-container {
+      display: flex;
+      min-height: 100vh;
+      transition: var(--transition);
+    }
+    
+    /* Sidebar */
+    .admin-sidebar {
+      width: 240px;
+      background: var(--dark);
+      color: var(--white);
+      position: fixed;
+      height: 100vh;
+      padding-top: 20px;
+      transition: var(--transition);
+      z-index: 100;
+      overflow-y: auto;
+    }
+    
+    .admin-sidebar h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-weight: 700;
+      font-size: 1.5rem;
+    }
+    
+    .admin-sidebar ul {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .admin-sidebar ul li {
+      margin: 5px 15px;
+    }
+    
+    .admin-sidebar ul li a {
+      display: flex;
+      align-items: center;
+      padding: 12px 15px;
+      color: #d1d5db;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: var(--transition);
+    }
+    
+    .admin-sidebar ul li a:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--white);
+    }
+    
+    .admin-sidebar ul li.active a {
+      background: var(--primary);
+      color: var(--white);
+    }
+    
+    .admin-sidebar ul li a i {
+      font-size: 1.2rem;
+      margin-right: 10px;
+    }
+    
+    /* Main Content */
+    .admin-content {
+      flex: 1;
+      margin-left: 235px;
+      padding: 10px;
+      transition: var(--transition);
+    }
+    
+    /* Header */
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .admin-header h1 {
+      font-size: 1.8rem;
+      color: var(--dark);
+      font-weight: 700;
+    }
+    
+    .admin-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .admin-user span {
+      font-weight: 500;
+    }
+    
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      background: var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    
+    /* Department Management */
+    .department-management {
+      display: grid;
+      gap: 20px;
+    }
+    
+    .department-form {
+      background: var(--white);
+      padding: 20px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    
+    .department-form h3 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 15px;
+    }
+    
+    .department-form input {
+      width: 100%;
+      padding: 10px 15px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+    
+    .department-form button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+    
+    .department-form button:hover {
+      background: var(--primary-dark);
+    }
+    
+    .department-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    
+    .department-table th, 
+    .department-table td {
+      text-align: left;
+      padding: 12px 15px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .department-table th {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      color: var(--gray);
+      font-weight: 600;
+      background: var(--light);
+    }
+    
+    .department-table tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .department-table a {
+      color: var(--primary);
+      text-decoration: none;
+      margin-right: 10px;
+    }
+    
+    .department-table a:hover {
+      text-decoration: underline;
+    }    
+    /* Responsive */
+    @media (max-width: 992px) {
+      .admin-sidebar {
+        width: 80px;
+      }
+      
+      .admin-sidebar h2,
+      .admin-sidebar ul li a span {
+        display: none;
+      }
+      
+      .admin-content {
+        margin-left: 80px;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .admin-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .admin-user {
+        margin-top: 10px;
+      }
+    }
+      /* ================= MONTH CARDS ================= */
         .month {
             border: 2px solid var(--border);
             border-radius: var(--radius);
             overflow: hidden;
             margin-bottom: 16px;
             background: var(--white);
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            padding: 6px;
+            top: 20px;
         }
         .month-header {
             width: 100%;
@@ -205,6 +341,7 @@ include 'admin_header.php';
             border: none;
             cursor: pointer;
             font-weight: 700;
+            font-size: 16px;
         }
         .chev {
             transition: transform .2s ease;
@@ -212,8 +349,8 @@ include 'admin_header.php';
             margin-left: 8px;
             vertical-align: middle;
             font-size: 18px;
-            
         }
+
         .month.open .chev {
             transform: rotate(180deg);
         }
@@ -241,6 +378,7 @@ include 'admin_header.php';
             border-radius: 12px;
             padding: 12px;
         }
+        
         /* ================= TABLE ================= */
         table {
             width: 100%;
@@ -248,24 +386,32 @@ include 'admin_header.php';
             border-spacing: 0;
             overflow: hidden;
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: 8px;
         }
         thead th {
-            background: #f9fafb;
-            color: #374151;
-            font-size: 12px;
-            text-transform: uppercase;
-            padding: 10px;
-            border-bottom: 1px solid var(--border);
+          font-size: 0.8rem;
+          text-transform: uppercase;
+          color: var(--white);
+          font-weight: 700;
+          background: var(--primary);
+          letter-spacing: 1px;
+          border-bottom: 2px solid var(--primary-dark);
         }
         tbody td {
-            padding: 10px;
+            padding: 20px;
             border-bottom: 1px solid var(--border);
             font-size: 14px;
+            color: #4b5563;
+            vertical-align: middle;
+            text-align: center;
         }
         tbody tr:last-child td {
             border-bottom: none;
         }
+        tbody tr:hover {
+            background: #f5f6f8ff;
+        }
+
         /* ================= STATUS PILLS ================= */
         .pill {
             display: inline-flex;
@@ -294,17 +440,11 @@ include 'admin_header.php';
         .muted {
             color: var(--gray);
         }
-    </style>
+  </style>
 </head>
 <body>
-
     <!-- Main Content -->
-    <main class="admin-content">
-        <!-- <header class="admin-header">
-            <h1>Attendance Records</h1>
-            <div class="admin-user"><span>Admin: <?php echo htmlspecialchars($username); ?></span></div>
-        </header> -->
-        
+    <main>
         <?php foreach ($grouped as $monthKey => $data):
             $monthTitle = date('F Y', strtotime($monthKey . '-01'));
             $summary = $data['summary'];

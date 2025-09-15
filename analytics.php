@@ -233,8 +233,11 @@ include 'admin_header.php';
     .analytics-table th {
       font-size: 0.8rem;
       text-transform: uppercase;
-      color: var(--gray);
-      font-weight: 600;
+      color: var(--white);
+      font-weight: 700;
+      background: var(--primary);
+      letter-spacing: 1px;
+      border-bottom: 2px solid var(--primary-dark);
     }
     
     .analytics-table tr:last-child td {

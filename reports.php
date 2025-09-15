@@ -207,7 +207,7 @@ include 'admin_header.php';
       flex-direction: column;
       gap: 5px;
       font-size: 0.9rem;
-      color: var(--gray);
+      color: black;
     }
     
     .date-filter input {
@@ -259,14 +259,18 @@ include 'admin_header.php';
       text-align: left;
       padding: 12px 15px;
       border-bottom: 1px solid #e5e7eb;
+      font-size: 0.9rem;
+      color: var(--dark);
     }
     
     .report-table th {
       font-size: 0.8rem;
       text-transform: uppercase;
-      color: var(--gray);
-      font-weight: 600;
-      background: var(--light);
+      color: var(--white);
+      font-weight: 700;
+      background: var(--primary);
+      letter-spacing: 1px;
+      border-bottom: 2px solid var(--primary-dark);
     }
     
     .report-table tr:last-child td {
