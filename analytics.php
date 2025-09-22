@@ -2,12 +2,12 @@
 session_start();
 include 'config.php';
 
-// Angalia kama ni admin
+// Check if user is an admin
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit();
 }
-// Hakikisha ni admin
+// Make sure the user is an admin
 $stmt = $conn->prepare("SELECT is_admin FROM users WHERE username = ?");
 $stmt->bind_param("s", $_SESSION['username']);
 $stmt->execute();
@@ -20,28 +20,28 @@ if (!$is_admin) {
     exit();
 }
 
-// Chukua data ya uchambuzi
+// Fetch analysis data
 $analytics = [
     'late_arrivals' => [],
     'early_departures' => [],
     'average_hours' => []
 ];
 
-// Watu waliochelewa (baada ya 9:00 AM)
+// People who were late (after 9:00 AM)
 $result = $conn->query("SELECT name, department, date, time_in 
                         FROM attendance 
                         WHERE TIME(time_in) > '09:00:00'
                         ORDER BY date DESC LIMIT 10");
 $analytics['late_arrivals'] = $result->fetch_all(MYSQLI_ASSOC);
 
-// Watu waliondoka mapema (kabla ya 5:00 PM)
+// People who left early (before 5:00 PM)
 $result = $conn->query("SELECT name, department, date, time_out 
                         FROM attendance 
                         WHERE TIME(time_out) < '17:00:00' AND time_out IS NOT NULL
                         ORDER BY date DESC LIMIT 10");
 $analytics['early_departures'] = $result->fetch_all(MYSQLI_ASSOC);
 
-// Wastani wa masaa kwa kila idara
+// Average hours for each department
 $result = $conn->query("SELECT department, 
                         AVG(TIMESTAMPDIFF(MINUTE, time_in, time_out))/60 as avg_hours
                         FROM attendance 
@@ -56,7 +56,7 @@ include 'admin_header.php';
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Badilisha sehemu ya <head> kuwa kama hii -->
+ <!-- Change the <head> section to be like this -->
 <head>
   <meta charset="UTF-8">
   <title>Admin Panel - Analytics</title>
@@ -65,19 +65,20 @@ include 'admin_header.php';
   <link rel="stylesheet" href="css/admin.css">
   <style>
     :root {
-      --primary: #3b82f6;
-      --primary-dark: #2563eb;
-      --secondary: #10b981;
-      --accent: #f59e0b;
-      --danger: #ef4444;
-      --dark: #1f2937;
-      --gray: #6b7280;
-      --light: #f3f4f6;
+      --primary: #6366f1;           /* Indigo-500 */
+      --primary-dark: #4338ca;      /* Indigo-700 */
+      --secondary: #06b6d4;         /* Cyan-500 */
+      --accent: #fbbf24;            /* Amber-400 */
+      --danger: #ef4444;            /* Red-500 */
+      --dark: #111827;              /* Gray-900 */
+      --gray: #6b7280;              /* Gray-500 */
+      --light: #f8fafc;             /* Gray-50 */
       --white: #ffffff;
-      --shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-      --radius: 12px;
-      --transition: all 0.3s ease;
+      --shadow: 0 4px 12px rgba(99,102,241,0.08);
+      --radius: 14px;
+      --transition: all 0.3s cubic-bezier(.4,0,.2,1);
     }
+    
     
     * {
       margin: 0;
@@ -98,9 +99,9 @@ include 'admin_header.php';
     }
     
     /* Sidebar */
-    .admin-sidebar {
+     .admin-sidebar {
       width: 240px;
-      background: var(--dark);
+      background: linear-gradient(180deg, var(--primary-dark) 80%, var(--dark) 100%);
       color: var(--white);
       position: fixed;
       height: 100vh;
@@ -108,6 +109,7 @@ include 'admin_header.php';
       transition: var(--transition);
       z-index: 100;
       overflow-y: auto;
+      box-shadow: 2px 0 12px rgba(99,102,241,0.08);
     }
     
     .admin-sidebar h2 {
@@ -130,20 +132,23 @@ include 'admin_header.php';
       display: flex;
       align-items: center;
       padding: 12px 15px;
-      color: #d1d5db;
+      color: #e0e7ff;
       text-decoration: none;
       border-radius: 8px;
       transition: var(--transition);
     }
     
     .admin-sidebar ul li a:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: var(--white);
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(99,102,241,0.10);
     }
     
     .admin-sidebar ul li.active a {
-      background: var(--primary);
-      color: var(--white);
+      background: var(--accent);
+      color: var(--dark);
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(251,191,36,0.10);
     }
     
     .admin-sidebar ul li a i {
@@ -283,7 +288,7 @@ include 'admin_header.php';
       </header>
 
       <div class="analytics-system">
-        <!-- Uchambuzi wa kuchelewa -->
+       <!-- Lateness analysis -->
         <div class="analytics-section">
             <h3>Late Arrivals (After 9:00 AM)</h3>
             <table class="analytics-table">
@@ -308,7 +313,7 @@ include 'admin_header.php';
             </table>
         </div>
 
-        <!-- Uchambuzi wa kuondoka mapema -->
+      <!-- Early departure analysis -->
         <div class="analytics-section">
             <h3>Early Departures (Before 5:00 PM)</h3>
             <table class="analytics-table">
@@ -333,7 +338,7 @@ include 'admin_header.php';
             </table>
         </div>
 
-        <!-- Wastani wa masaa kwa idara -->
+      <!-- Average hours per department -->
         <div class="analytics-section">
             <h3>Average Working Hours by Department</h3>
             <table class="analytics-table">

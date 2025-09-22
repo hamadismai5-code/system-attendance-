@@ -77,19 +77,19 @@ include 'admin_header.php';
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
   <style>
-    :root {
-      --primary: #3b82f6;
-      --primary-dark: #2563eb;
-      --secondary: #10b981;
-      --accent: #f59e0b;
-      --danger: #ef4444;
-      --dark: #1f2937;
-      --gray: #6b7280;
-      --light: #f3f4f6;
+   :root {
+      --primary: #6366f1;           /* Indigo-500 */
+      --primary-dark: #4338ca;      /* Indigo-700 */
+      --secondary: #06b6d4;         /* Cyan-500 */
+      --accent: #fbbf24;            /* Amber-400 */
+      --danger: #ef4444;            /* Red-500 */
+      --dark: #111827;              /* Gray-900 */
+      --gray: #6b7280;              /* Gray-500 */
+      --light: #f8fafc;             /* Gray-50 */
       --white: #ffffff;
-      --shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-      --radius: 12px;
-      --transition: all 0.3s ease;
+      --shadow: 0 4px 12px rgba(99,102,241,0.08);
+      --radius: 14px;
+      --transition: all 0.3s cubic-bezier(.4,0,.2,1);
     }
     
     * {
@@ -112,9 +112,9 @@ include 'admin_header.php';
     }
     
     /* Sidebar */
-    .admin-sidebar {
+     .admin-sidebar {
       width: 240px;
-      background: var(--dark);
+      background: linear-gradient(180deg, var(--primary-dark) 80%, var(--dark) 100%);
       color: var(--white);
       position: fixed;
       height: 100vh;
@@ -122,6 +122,7 @@ include 'admin_header.php';
       transition: var(--transition);
       z-index: 100;
       overflow-y: auto;
+      box-shadow: 2px 0 12px rgba(99,102,241,0.08);
     }
     
     .admin-sidebar h2 {
@@ -144,20 +145,23 @@ include 'admin_header.php';
       display: flex;
       align-items: center;
       padding: 12px 15px;
-      color: #d1d5db;
+      color: #e0e7ff;
       text-decoration: none;
       border-radius: 8px;
       transition: var(--transition);
     }
     
     .admin-sidebar ul li a:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: var(--white);
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(99,102,241,0.10);
     }
     
     .admin-sidebar ul li.active a {
-      background: var(--primary);
-      color: var(--white);
+      background: var(--accent);
+      color: var(--dark);
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(251,191,36,0.10);
     }
     
     .admin-sidebar ul li a i {
@@ -168,10 +172,11 @@ include 'admin_header.php';
     /* Main Content */
     .admin-content {
       flex: 1;
-      margin-left: 235px;
-      padding: 10px;
+      margin-left: 230px;
+      padding: 20px;
       transition: var(--transition);
     }
+    
     
     /* Header */
     .admin-header {

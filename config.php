@@ -55,6 +55,7 @@ function isAdmin($username, $conn) {
     $stmt = $conn->prepare("SELECT is_admin FROM users WHERE username = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
+    $is_admin = null;
     $stmt->bind_result($is_admin);
     $stmt->fetch();
     $stmt->close();
