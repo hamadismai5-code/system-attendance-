@@ -172,6 +172,8 @@ include 'admin_header.php';
       margin-bottom: 25px;
       padding-bottom: 15px;
       border-bottom: 1px solid #e5e7eb;
+      background: var(--white);
+      box-shadow: var(--shadow);
     }
     
     .admin-header h1 {
@@ -233,6 +235,7 @@ include 'admin_header.php';
       text-align: left;
       padding: 12px 15px;
       border-bottom: 1px solid #e5e7eb;
+      font-size: 0.9rem;
     }
     
     .analytics-table th {
