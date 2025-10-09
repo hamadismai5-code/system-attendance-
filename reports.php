@@ -1,30 +1,22 @@
 
 <?php
-session_start();
+include 'session_check.php';
 include 'config.php';
 
-// Angalia kama ni admin
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
-    exit();
-}
-
-// Hakikisha ni admin
-$stmt = $conn->prepare("SELECT is_admin FROM users WHERE username = ?");
-$stmt->bind_param("s", $_SESSION['username']);
-$stmt->execute();
-$stmt->bind_result($is_admin);
-$stmt->fetch();
-$stmt->close();
-
-if (!$is_admin) {
-    header("Location: attendance.php");
+// Use centralized functions for session and admin validation
+validateSession();
+if (!isAdminUser()) {
+    header("Location: attendance.php?error=access_denied");
     exit();
 }
 
 // Chukua data kwa ajili ya ripoti
-$start_date = $_GET['start_date'] ?? date('Y-m-01');
-$end_date = $_GET['end_date'] ?? date('Y-m-t');
+$start_date_raw = sanitizeInput($_GET['start_date'] ?? '');
+$end_date_raw = sanitizeInput($_GET['end_date'] ?? '');
+
+// Validate dates or use defaults
+$start_date = validateDate($start_date_raw) ? $start_date_raw : date('Y-m-01');
+$end_date = validateDate($end_date_raw) ? $end_date_raw : date('Y-m-t');
 
 $attendance_data = [];
 $stmt = $conn->prepare("SELECT name, department, date, time_in, time_out 
@@ -42,8 +34,7 @@ include 'admin_header.php';
 
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<!-- Badilisha sehemu ya <head> kuwa kama hii -->
+
 <head>
   <meta charset="UTF-8">
   <title>Admin Panel - Reports</title>
@@ -146,7 +137,7 @@ include 'admin_header.php';
     /* Main Content */
     .admin-content {
       flex: 1;
-      margin-left: 230px;
+      margin-left: 240px;
       padding: 20px;
       transition: var(--transition);
     }
@@ -315,16 +306,7 @@ include 'admin_header.php';
     }
   </style>
 </head>
-</head>
 <body>
-  <div class="admin-container">
-    <main class="admin-content" style="margin-left:0;">
-      <header class="admin-header">
-        <h1>Attendance Reports</h1>
-        <div class="admin-user">
-         
-        </div>
-      </header>
 
       <div class="report-system">
         <!-- Fomu ya kuchagua tarehe -->
@@ -373,7 +355,5 @@ include 'admin_header.php';
             </tbody>
         </table>
       </div>
-    </main>
-  </div>
 </body>
 </html>

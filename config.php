@@ -9,11 +9,10 @@ header('X-Frame-Options: DENY');
 header('X-XSS-Protection: 1; mode=block');
 header('X-Content-Type-Options: nosniff');
 
-$host = '127.0.0.1';
-$dbuser = 'root';
-$dbpass = '';
-$dbname = 'attendance_db';
-
+define('DB_HOST', '127.0.0.1');
+define('DB_USER', 'root');
+define('DB_PASS', '');
+define('DB_NAME', 'attendance_db');
 
 // Error reporting - only show errors in development
 if ($_SERVER['SERVER_NAME'] === 'localhost' || $_SERVER['SERVER_ADDR'] === '127.0.0.1') {
@@ -31,11 +30,11 @@ date_default_timezone_set('Africa/Dar_es_Salaam');
 
 // Database connection with improved error handling
 try {
-    $conn = new mysqli($host, $dbuser, $dbpass, $dbname);
+    $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
     
-    if ($conn->connect_error) {
-        throw new Exception("Database connection failed: " . $conn->connect_error);
-    }
+   if ($conn->connect_error) {
+    throw new Exception("Database connection failed: " . htmlspecialchars($conn->connect_error));
+}
     
     $conn->set_charset("utf8mb4");
     
@@ -48,18 +47,6 @@ try {
     } else {
         die("System temporarily unavailable. Please try again later.");
     }
-}
-
-// Security functions
-function isAdmin($username, $conn) {
-    $stmt = $conn->prepare("SELECT is_admin FROM users WHERE username = ?");
-    $stmt->bind_param("s", $username);
-    $stmt->execute();
-    $is_admin = null;
-    $stmt->bind_result($is_admin);
-    $stmt->fetch();
-    $stmt->close();
-    return $is_admin;
 }
 
 function generateCsrfToken() {

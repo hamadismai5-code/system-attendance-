@@ -5,8 +5,8 @@ include 'session_check.php';
 
 // Check login and admin status
 validateSession();
-if (!isAdminUser()) {
-    header("Location: attendance.php");
+if (!isAdminUser()) { // isAdminUser() now returns true/false
+    header("Location: attendance.php?error=access_denied");
     exit();
 }
 
@@ -183,10 +183,11 @@ include 'admin_header.php';
     /* Main Content */
     .admin-content {
       flex: 1;
-      margin-left: 120px;
-      padding: 20px;
+      margin-left: 240px;
+      padding: 10px;
       transition: var(--transition);
     }
+    
     
     /* Header */
     .admin-header {
@@ -196,6 +197,7 @@ include 'admin_header.php';
       margin-bottom: 25px;
       padding-bottom: 15px;
       border-bottom: 1px solid #e5e7eb;
+
     }
     
     .admin-header h1 {
@@ -497,10 +499,7 @@ include 'admin_header.php';
 <body>
 
 <main class="admin-content">
-  <div class="admin-header">
-    <h1>Dashboard Overview</h1>
-  </div>
-  
+ 
   <!-- Stats Cards -->
   <section class="admin-stats">
     <div class="stat-card">

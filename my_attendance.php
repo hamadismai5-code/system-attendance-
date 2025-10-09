@@ -1,24 +1,18 @@
 <?php
-session_start();
+include 'session_check.php';
 include 'config.php';
-// Hakikisha admin ame-login
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
-    exit();
+
+// Hakikisha user ame-login na ni admin
+validateSession();
+if (!isAdminUser()) {
+    exit(); // isAdminUser() in session_check.php will redirect
 }
+
 $username = $_SESSION['username'];
-// Angalia kama user ni admin
-$stmt = $conn->prepare("SELECT is_admin FROM users WHERE username = ?");
-$stmt->bind_param("s", $username);
-$stmt->execute();
-$stmt->bind_result($is_admin);
-$stmt->fetch();
-$stmt->close();
-if (!$is_admin) {
-    die("Access denied. You are not an admin.");
-}
-// Chukua attendance zote
-$att_stmt = $conn->prepare("SELECT Name, Date, Time_in, Time_out FROM attendance ORDER BY Date DESC");
+
+// Chukua attendance za admin aliye-login
+$att_stmt = $conn->prepare("SELECT Name, Date, Time_in, Time_out FROM attendance WHERE Name = ? ORDER BY Date DESC");
+$att_stmt->bind_param("s", $username);
 $att_stmt->execute();
 $att_stmt->bind_result($name, $date, $time_in, $time_out);
 $attendance_records = [];

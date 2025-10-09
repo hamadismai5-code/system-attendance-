@@ -1,25 +1,15 @@
 <?php
-session_start();
+include 'session_check.php';
 include 'config.php';
 
-// Check if user is an admin
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
-    exit();
-}
-// Make sure the user is an admin
-$stmt = $conn->prepare("SELECT is_admin FROM users WHERE username = ?");
-$stmt->bind_param("s", $_SESSION['username']);
-$stmt->execute();
-$stmt->bind_result($is_admin);
-$stmt->fetch();
-$stmt->close();
-
-if (!$is_admin) {
-    header("Location: attendance.php");
+// Use centralized functions for session and admin validation
+validateSession();
+if (!isAdminUser()) {
+    header("Location: attendance.php?error=access_denied");
     exit();
 }
 
+// ==================== Data Fetching with Prepared Statements ====================
 // Fetch analysis data
 $analytics = [
     'late_arrivals' => [],
@@ -27,27 +17,37 @@ $analytics = [
     'average_hours' => []
 ];
 
-// People who were late (after 9:00 AM)
-$result = $conn->query("SELECT name, department, date, time_in 
-                        FROM attendance 
-                        WHERE TIME(time_in) > '09:00:00'
-                        ORDER BY date DESC LIMIT 10");
-$analytics['late_arrivals'] = $result->fetch_all(MYSQLI_ASSOC);
+// People who were late (after 08:15 AM - consistent with my_attendance.php)
+$late_time = '08:15:00';
+$late_stmt = $conn->prepare("SELECT name, department, date, time_in 
+                             FROM attendance 
+                             WHERE TIME(time_in) > ?
+                             ORDER BY date DESC, time_in DESC LIMIT 10");
+$late_stmt->bind_param("s", $late_time);
+$late_stmt->execute();
+$analytics['late_arrivals'] = $late_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$late_stmt->close();
 
 // People who left early (before 5:00 PM)
-$result = $conn->query("SELECT name, department, date, time_out 
-                        FROM attendance 
-                        WHERE TIME(time_out) < '17:00:00' AND time_out IS NOT NULL
-                        ORDER BY date DESC LIMIT 10");
-$analytics['early_departures'] = $result->fetch_all(MYSQLI_ASSOC);
+$early_time = '17:00:00';
+$early_stmt = $conn->prepare("SELECT name, department, date, time_out 
+                              FROM attendance 
+                              WHERE TIME(time_out) < ? AND time_out IS NOT NULL
+                              ORDER BY date DESC, time_out DESC LIMIT 10");
+$early_stmt->bind_param("s", $early_time);
+$early_stmt->execute();
+$analytics['early_departures'] = $early_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$early_stmt->close();
 
 // Average hours for each department
-$result = $conn->query("SELECT department, 
-                        AVG(TIMESTAMPDIFF(MINUTE, time_in, time_out))/60 as avg_hours
-                        FROM attendance 
-                        WHERE time_out IS NOT NULL
-                        GROUP BY department");
-$analytics['average_hours'] = $result->fetch_all(MYSQLI_ASSOC);
+$avg_stmt = $conn->prepare("SELECT department, 
+                            AVG(TIMESTAMPDIFF(MINUTE, time_in, time_out))/60 as avg_hours
+                            FROM attendance 
+                            WHERE time_out IS NOT NULL
+                            GROUP BY department");
+$avg_stmt->execute();
+$analytics['average_hours'] = $avg_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$avg_stmt->close();
 
 // Include admin header if any
 include 'admin_header.php';
@@ -282,13 +282,7 @@ include 'admin_header.php';
 </head>
 </head>
 <body>
-  <main class="admin-content" style="margin-left:0;">
-      <header class="admin-header">
-        <h1>Attendance Analytics</h1>
-        <div class="admin-user">
-        
-        </div>
-      </header>
+  <!-- The admin_header.php already includes the main content wrapper -->
 
       <div class="analytics-system">
        <!-- Lateness analysis -->
@@ -362,6 +356,5 @@ include 'admin_header.php';
             </table>
         </div>
       </div>
-  </main>
 </body>
 </html>

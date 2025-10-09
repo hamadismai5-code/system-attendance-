@@ -58,11 +58,7 @@ function validateSession() {
 }
 
 function isAdminUser() {
-    if (!isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
-        header("Location: attendance.php?error=access_denied");
-        exit();
-    }
-    return true;
+    return isset($_SESSION['is_admin']) && $_SESSION['is_admin'];
 }
 
 // Force HTTPS in production

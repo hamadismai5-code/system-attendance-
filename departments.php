@@ -1,25 +1,15 @@
 <?php
-session_start();
+include 'session_check.php';
 include 'config.php';
 
-// Angalia kama ni admin
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
+// Use centralized functions for session and admin validation
+validateSession();
+if (!isAdminUser()) {
+    header("Location: attendance.php?error=access_denied");
     exit();
 }
 
-// Hakikisha ni admin
-$stmt = $conn->prepare("SELECT is_admin FROM users WHERE username = ?");
-$stmt->bind_param("s", $_SESSION['username']);
-$stmt->execute();
-$stmt->bind_result($is_admin);
-$stmt->fetch();
-$stmt->close();
-
-if (!$is_admin) {
-    header("Location: attendance.php");
-    exit();
-}
+$_SESSION['error'] = $_SESSION['message'] = null; // Clear previous messages
 
 // Chukua idara zote
 $departments = [];
@@ -30,23 +20,59 @@ if ($result) {
 
 // Ongeza idara mpya
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_department'])) {
-    $name = $_POST['name'];
+    if (validateCsrfToken($_POST['csrf_token'])) {
+        $name = sanitizeInput($_POST['name']);
 
-    $stmt = $conn->prepare("INSERT INTO departments (name) VALUES (?)");
-    $stmt->bind_param("s", $name);
-    $stmt->execute();
-    header("Location: departments.php");
-    exit();
+        // Check if department already exists
+        $check_stmt = $conn->prepare("SELECT id FROM departments WHERE name = ?");
+        $check_stmt->bind_param("s", $name);
+        $check_stmt->execute();
+        $check_stmt->store_result();
+
+        if ($check_stmt->num_rows > 0) {
+            $_SESSION['error'] = "Department '{$name}' already exists.";
+        } else {
+            $stmt = $conn->prepare("INSERT INTO departments (name) VALUES (?)");
+            $stmt->bind_param("s", $name);
+            if ($stmt->execute()) {
+                $_SESSION['message'] = "Department '{$name}' added successfully.";
+            } else {
+                $_SESSION['error'] = "Failed to add department.";
+            }
+        }
+        header("Location: departments.php");
+        exit();
+    } else {
+        $_SESSION['error'] = "Invalid request (CSRF token mismatch).";
+    }
 }
 
 // Futa idara
-if (isset($_GET['delete'])) {
-    $id = (int)$_GET['delete'];
-    $stmt = $conn->prepare("DELETE FROM departments WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    header("Location: departments.php");
-    exit();
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_department'])) {
+    if (validateCsrfToken($_POST['csrf_token'])) {
+        $id = (int)$_POST['id'];
+
+        // Check if any users are assigned to this department
+        $user_check_stmt = $conn->prepare("SELECT COUNT(*) FROM users u JOIN departments d ON u.department = d.name WHERE d.id = ?");
+        $user_check_stmt->bind_param("i", $id);
+        $user_check_stmt->execute();
+        $user_check_stmt->bind_result($user_count);
+        $user_check_stmt->fetch();
+        $user_check_stmt->close();
+
+        if ($user_count > 0) {
+            $_SESSION['error'] = "Cannot delete department. {$user_count} user(s) are still assigned to it.";
+        } else {
+            $stmt = $conn->prepare("DELETE FROM departments WHERE id = ?");
+            $stmt->bind_param("i", $id);
+            $stmt->execute();
+            $_SESSION['message'] = "Department deleted successfully.";
+        }
+        header("Location: departments.php");
+        exit();
+    } else {
+        $_SESSION['error'] = "Invalid request (CSRF token mismatch).";
+    }
 }
 // Include admin header if any
 include 'admin_header.php';
@@ -157,7 +183,7 @@ include 'admin_header.php';
     /* Main Content */
     .admin-content {
       flex: 1;
-      margin-left: 120px;
+      margin-left: 230px;
       padding: 20px;
       transition: var(--transition);
     }
@@ -274,12 +300,28 @@ include 'admin_header.php';
       border-bottom: none;
     }
     
-    .department-table a {
+    .btn-edit, .btn-delete-form button {
+      padding: 6px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: var(--transition);
+      display: inline-block;
+      cursor: pointer;
+    }
+
+    .btn-edit {
       color: var(--primary);
       text-decoration: none;
       margin-right: 10px;
     }
-    
+
+    .btn-delete-form button {
+        background: var(--danger);
+        color: var(--white);
+        border: none;
+    }
     .department-table a:hover {
       text-decoration: underline;
     }
@@ -322,10 +364,20 @@ include 'admin_header.php';
          
         </div>
       </header>
+      
+      <!-- Notifications -->
+      <?php if (!empty($_SESSION['message'])): ?>
+        <div class="alert alert-success"><?= $_SESSION['message']; unset($_SESSION['message']); ?></div>
+      <?php endif; ?>
+
+      <?php if (!empty($_SESSION['error'])): ?>
+        <div class="alert alert-danger"><?= $_SESSION['error']; unset($_SESSION['error']); ?></div>
+      <?php endif; ?>
 
       <div class="department-management">
         <!-- Fomu ya kuongeza idara -->
         <form method="POST" class="department-form">
+            <input type="hidden" name="csrf_token" value="<?php echo generateCsrfToken(); ?>">
             <h3>Add New Department</h3>
             <input type="text" name="name" placeholder="Department Name" required>
             <button type="submit" name="add_department">Add Department</button>
@@ -346,8 +398,12 @@ include 'admin_header.php';
                     <td><?= $dept['id'] ?></td>
                     <td><?= htmlspecialchars($dept['name']) ?></td>
                     <td>
-                        <a href="edit_department.php?id=<?= $dept['id'] ?>">Edit</a> |
-                        <a href="departments.php?delete=<?= $dept['id'] ?>" onclick="return confirm('Are you sure?')">Delete</a>
+                        <a href="edit_department.php?id=<?= $dept['id'] ?>" class="btn-edit">Edit</a>
+                        <form method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this department?');" class="btn-delete-form">
+                            <input type="hidden" name="id" value="<?= $dept['id'] ?>">
+                            <input type="hidden" name="csrf_token" value="<?php echo generateCsrfToken(); ?>">
+                            <button type="submit" name="delete_department">Delete</button>
+                        </form>
                     </td>
                 </tr>
                 <?php endforeach; ?>

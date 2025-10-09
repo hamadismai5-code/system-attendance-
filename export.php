@@ -3,7 +3,7 @@ session_start();
 include 'config.php';
 
 // Angalia kama ni admin
-if (!isset($_SESSION['username']) || !isAdmin($_SESSION['username'], $conn)) {
+if (!isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
     header("Location: login.php");
     exit();
 }

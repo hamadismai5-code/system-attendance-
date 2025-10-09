@@ -1,25 +1,10 @@
 <?php
-session_start();
+include 'session_check.php';
 include 'config.php';
 
-// Angalia kama ni admin
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
-    exit();
-}
-
-// Hakikisha ni admin
-$stmt = $conn->prepare("SELECT is_admin FROM users WHERE username = ?");
-$stmt->bind_param("s", $_SESSION['username']);
-$stmt->execute();
-$stmt->bind_result($is_admin);
-$stmt->fetch();
-$stmt->close();
-
-if (!$is_admin) {
-    header("Location: attendance.php");
-    exit();
-}
+// Hakikisha user ame-login na ni admin
+validateSession();
+isAdminUser();
 
 // Chukua watumiaji wote
 $users = [];
@@ -28,15 +13,23 @@ if ($result) {
     $users = $result->fetch_all(MYSQLI_ASSOC);
 }
 
+// Fetch departments for the dropdown
+$departments = [];
+$dept_result = $conn->query("SELECT name FROM departments ORDER BY name ASC");
+if ($dept_result) {
+    $departments = $dept_result->fetch_all(MYSQLI_ASSOC);
+}
+
 // Ongeza mtumiaji mpya
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
     $username = $_POST['username'];
     $email = $_POST['email'];
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
     $is_admin = isset($_POST['is_admin']) ? 1 : 0;
+    $department = $_POST['department'];
 
-    $stmt = $conn->prepare("INSERT INTO users (username, email, password, is_admin) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("sssi", $username, $email, $password, $is_admin);
+    $stmt = $conn->prepare("INSERT INTO users (username, email, password, is_admin, department) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssis", $username, $email, $password, $is_admin, $department);
     $stmt->execute();
     header("Location: users.php");
     exit();
@@ -50,15 +43,23 @@ if (isset($_GET['delete'])) {
     $conn->begin_transaction();
     
     try {
-        // 1. Futa rekodi za attendance za mtumiaji
-        $stmt = $conn->prepare("DELETE FROM attendance WHERE name IN (SELECT username FROM users WHERE id = ?)");
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
+        // 1. Get username before deleting the user
+        $user_stmt = $conn->prepare("SELECT username FROM users WHERE id = ?");
+        $user_stmt->bind_param("i", $id);
+        $user_stmt->execute();
+        $user_result = $user_stmt->get_result();
+        $user = $user_result->fetch_assoc();
         
-        // 2. Futa mtumiaji
-        $stmt = $conn->prepare("DELETE FROM users WHERE id = ?");
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
+        if ($user) {
+            // 2. Futa rekodi za attendance za mtumiaji
+            $att_stmt = $conn->prepare("DELETE FROM attendance WHERE name = ?");
+            $att_stmt->bind_param("s", $user['username']);
+            $att_stmt->execute();
+        }
+        // 3. Futa mtumiaji
+        $del_user_stmt = $conn->prepare("DELETE FROM users WHERE id = ?");
+        $del_user_stmt->bind_param("i", $id);
+        $del_user_stmt->execute();
         
         // Kamiliisha transaction
         $conn->commit();
@@ -122,10 +123,44 @@ include 'admin_header.php';
     .admin-container {
       display: flex;
       min-height: 100vh;
+      transition: var(--transition);
     }
-
+:root {
+      --primary: #6366f1;           /* Indigo-500 */
+      --primary-dark: #4338ca;      /* Indigo-700 */
+      --secondary: #06b6d4;         /* Cyan-500 */
+      --accent: #fbbf24;            /* Amber-400 */
+      --danger: #ef4444;            /* Red-500 */
+      --dark: #111827;              /* Gray-900 */
+      --gray: #6b7280;              /* Gray-500 */
+      --light: #f8fafc;             /* Gray-50 */
+      --white: #ffffff;
+      --shadow: 0 4px 12px rgba(99,102,241,0.08);
+      --radius: 14px;
+      --transition: all 0.3s cubic-bezier(.4,0,.2,1);
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--light);
+      color: var(--dark);
+      line-height: 1.5;
+    }
+    
+    .admin-container {
+      display: flex;
+      min-height: 100vh;
+      transition: var(--transition);
+    }
+    
     /* Sidebar */
-    .admin-sidebar {
+     .admin-sidebar {
       width: 240px;
       background: linear-gradient(180deg, var(--primary-dark) 80%, var(--dark) 100%);
       color: var(--white);
@@ -185,11 +220,10 @@ include 'admin_header.php';
     /* Main Content */
     .admin-content {
       flex: 1;
-      margin-left: 120px;
+      margin-left: 230px;
       padding: 20px;
       transition: var(--transition);
     }
-    
     /* Header */
     .admin-header {
       display: flex;
@@ -452,6 +486,14 @@ include 'admin_header.php';
           <h3>Add New User</h3>
           <input type="text" name="username" placeholder="Username" required>
           <input type="email" name="email" placeholder="Email" required>
+          <select name="department" required>
+              <option value="" disabled selected>Select Department</option>
+              <?php foreach ($departments as $dept): ?>
+                  <option value="<?php echo htmlspecialchars($dept['name']); ?>">
+                      <?php echo htmlspecialchars($dept['name']); ?>
+                  </option>
+              <?php endforeach; ?>
+          </select>
           <input type="password" name="password" placeholder="Password" required>
           <label>
             <input type="checkbox" name="is_admin"> Admin User

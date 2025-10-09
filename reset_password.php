@@ -22,7 +22,12 @@ if (isset($_GET['token'])) {
         
         // Process password reset
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $password = $_POST['password'];
+            if (!validateCsrfToken($_POST['csrf_token'])) {
+                $error = "Invalid request. Please try again.";
+            } elseif (empty($_POST['password']) || empty($_POST['confirm_password'])) {
+                $error = "Please fill out both password fields.";
+            } else {
+                $password = $_POST['password'];
             $confirm_password = $_POST['confirm_password'];
             
             if ($password !== $confirm_password) {
@@ -45,6 +50,7 @@ if (isset($_GET['token'])) {
                 }
                 
                 $update_stmt->close();
+            }
             }
         }
     } else {
@@ -88,6 +94,7 @@ if (isset($_GET['token'])) {
     if ($valid_token && empty($success)) {
     ?>
     <form method="POST" action="reset_password.php?token=<?php echo htmlspecialchars($_GET['token']); ?>" id="reset-form">
+      <input type="hidden" name="csrf_token" value="<?php echo generateCsrfToken(); ?>">
       <div class="input-box">
         <input type="password" name="password" id="password" placeholder="New Password" required />
         <i class='bx bxs-lock-alt'></i>

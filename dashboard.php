@@ -1,24 +1,17 @@
 <?php
-session_start();
+include 'session_check.php';
+include 'config.php';
 
-// Hakikisha mtumiaji ameingia
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
-    exit();
-}
+// Validate the user's session using the centralized function
+validateSession();
 
-// Kuweka muda wa kikao (30 dakika)
-if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > 1800)) {
-    // Kikao kimeisha
-    session_unset();
-    session_destroy();
-    header("Location: login.php?timeout=1");
-    exit();
+// Redirect user based on their role
+if (isAdminUser()) {
+    // If the user is an admin, redirect to the admin dashboard
+    header("Location: admin_dashboard.php");
+} else {
+    // If the user is a regular user, redirect to the main attendance page
+    header("Location: attendance.php");
 }
-$_SESSION['last_activity'] = time();
-
-// CSRF Token
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
+exit();
 ?>

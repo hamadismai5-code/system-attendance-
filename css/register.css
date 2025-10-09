@@ -17,13 +17,14 @@ body{
     background-attachment: fixed;
     background-size: cover;
     background-position: center;
+    padding: 20px;
 }
 
 .wrapper{
+    position: relative;
     width: 100%;
-    background: transparent;
+    background: rgba(255, 255, 255, 0.1);
     border: 2px solid rgba(255, 255, 255, .2);
-    backdrop-filter: blur(20px);
     box-shadow: 0 0 20px rgba(0, 0, 0, .2);
     display: flex;
     flex-direction: column;
@@ -33,84 +34,158 @@ body{
     margin: 0 auto;
     color: #fff;
     border-radius: 18px;
-    padding: 30px;
+    padding: 30px 25px;
 }
+
+/* Added pseudo-element for Chrome compatibility */
+.wrapper::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: inherit;
+    border-radius: inherit;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: -1;
+}
+
 .wrapper h1{
     font-size: 36px;
     text-align: center;
+    margin-bottom: 10px;
 }
 
 .wrapper .input-box{
-    background: transparent;
     width: 100%;
-    height: 46px;
-    margin: 30px 0;
+    height: 50px;
+    margin: 20px 0;
+    position: relative;
 }
 
 .input-box input{
     width: 100%;
     height: 100%;
-    background: transparent;
-    border: none;
+    background: rgba(255, 255, 255, 0.1);
     outline: none;
     border: 2px solid rgba(255, 255, 255, .2);
     border-radius: 40px;
-    font-size: 17px;
+    font-size: 16px;
     color: #fff;
-    padding: 20px  45px 20px 20px;
+    padding: 0 45px 0 20px;
+    transition: all 0.3s ease;
 }
 
-.input-box input:focus + i {
-    color: #ffd700;        /* Icon color changes when input is focused */
+.input-box input:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* UNIVERSAL SELECT STYLES FOR ALL BROWSERS */
+.select-box {
+    position: relative;
+    width: 100%;
+    height: 50px;
+    margin: 20px 0;
+}
+
+.select-box select {
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, .2);
+    border-radius: 40px;
+    font-size: 16px;
+    color: #fff;
+    padding: 0 45px 0 20px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.select-box select:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Custom arrow using border method - works everywhere */
+.select-box::after {
+    content: '';
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid #fff;
+    pointer-events: none;
+}
+
+/* Focus states for all browsers */
+.input-box input:focus {
+    border-color: #ffd700;
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.select-box select:focus {
+    border-color: #ffd700;
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Icon styles - consistent across all elements */
+.input-box i,
+.select-box i {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    color: #fff;
+    opacity: 0.8;
+    pointer-events: none;
+    transition: color 0.3s ease;
+    z-index: 3;
+}
+
+.input-box input:focus + i,
+.select-box select:focus + i {
+    color: #ffd700;
+    opacity: 1;
 }
 
 .input-box input::placeholder{
-    border-color: #fff;
+    color: rgba(255, 255, 255, 0.7);
 }
 
-.input-box {
-    position: relative; /* Ensure icons are positioned relative to input box */
-    background: transparent;
-    width: 100%;
-    height: 50px;
-    margin: 30px 0;
+/* Select placeholder styling */
+.select-box select:invalid {
+    color: rgba(255, 255, 255, 0.7);
 }
-.input-box i {
-    position: absolute;
-    right: 20px;           /* Move icon closer to the input's edge */
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 22px;       /* Slightly larger for better visibility */
+
+.select-box select option {
+    background: #4c72ec;
     color: #fff;
-    opacity: 0.8;
-    pointer-events: none;  /* Allow clicks to pass through to input */
-    transition: color 0.2s;
+    padding: 12px;
+    font-size: 15px;
+    border: none;
 }
 
-.wrapper .remember-forgot{
-    display: flex;
-    justify-content: space-between;
-    font-size: 14.5px;
-    margin: -15px 0 15px;
-}
- 
-.remember-forgot label input{
-    accent-color: #fff;
-    margin-right: 3px;
+/* Hover effect for options in some browsers */
+.select-box select option:hover {
+    background: #3a5fcf;
 }
 
-.remember-forgot a{
-    color: #fff;
-    text-decoration: none;
-}
-
-.remember-forgot a:hover{
-    text-decoration: underline;
-}
-
+/* Button styles */
 .wrapper .btn{
     width: 100%;
-    height: 45px;
+    height: 50px;
     background: #fff;
     border: none;
     outline: none;
@@ -119,44 +194,151 @@ body{
     cursor: pointer;
     font-size: 16px;
     color: #333;
-    font-weight: 600px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin-top: 10px;
 }
 
 .btn:hover{
     background: #4c72ec;
     color: #fff;
-    transition: .3s ease;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
-.wrapper .input-box i {
-    position: absolute;
-    right: 20px;           /* Move icon closer to the input's edge */
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 22px;       /* Slightly larger for better visibility */
-    color: #fff;
-    opacity: 0.8;
-    pointer-events: none;  /* Allow clicks to pass through to input */
-    transition: color 0.2s;
+.btn:active{
+    transform: translateY(0);
 }
 
 .Register-link {
-  margin-top: 20px;
-  text-align: center;
-  font-size: 14px;
-  color: #faf6f6;
+    margin-top: 25px;
+    text-align: center;
+    font-size: 14px;
+    color: #faf6f6;
 }
 
 .Register-link a {
-  color: #fafcfd;
-  text-decoration: none;
-  font-weight: bold;
-  transition: color 0.3s ease;
+    color: #fafcfd;
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.3s ease;
 }
 
 .Register-link a:hover {
-  color: #005fa3;
-  text-decoration: underline;
+    color: #ffd700;
+    text-decoration: underline;
 }
 
+/* MOBILE FIRST RESPONSIVE DESIGN */
+@media (max-width: 480px) {
+    body {
+        padding: 15px;
+        align-items: flex-start;
+        padding-top: 40px;
+    }
+    
+    .wrapper {
+        padding: 25px 20px;
+        margin: 0;
+        max-width: 100%;
+    }
+    
+    .wrapper h1 {
+        font-size: 28px;
+        margin-bottom: 5px;
+    }
+    
+    .input-box,
+    .select-box {
+        height: 45px;
+        margin: 15px 0;
+    }
+    
+    .input-box input,
+    .select-box select {
+        font-size: 15px;
+        padding: 0 40px 0 15px;
+    }
+    
+    .input-box i,
+    .select-box i {
+        right: 15px;
+        font-size: 18px;
+    }
+    
+    .select-box::after {
+        right: 15px;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-top: 4px solid #fff;
+    }
+    
+    .wrapper .btn {
+        height: 45px;
+        font-size: 15px;
+    }
+    
+    .Register-link {
+        font-size: 13px;
+        margin-top: 20px;
+    }
+}
 
+/* Tablet devices */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .wrapper {
+        max-width: 450px;
+        padding: 35px 30px;
+    }
+}
+
+/* Firefox specific optimizations */
+@-moz-document url-prefix() {
+    .select-box select {
+        background: rgba(0, 0, 0, 0.3);
+        text-indent: 0.01px;
+    }
+    
+    .select-box select option {
+        background: #4c72ec;
+    }
+}
+
+/* Safari specific optimizations */
+@media not all and (min-resolution:.001dpcm) { 
+    @supports (-webkit-appearance:none) {
+        .select-box select {
+            background: rgba(0, 0, 0, 0.25);
+        }
+    }
+}
+
+/* High contrast support for accessibility */
+@media (prefers-contrast: high) {
+    .input-box input,
+    .select-box select {
+        border-width: 3px;
+        border-color: #fff;
+    }
+    
+    .input-box input:focus,
+    .select-box select:focus {
+        border-color: #ffd700;
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .input-box input,
+    .select-box select,
+    .btn,
+    .input-box i,
+    .select-box i {
+        transition: none;
+    }
+    
+    .btn:hover {
+        transform: none;
+    }
+}

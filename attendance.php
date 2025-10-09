@@ -6,78 +6,84 @@ include 'config.php';
 // Verify user is logged in
 validateSession();
 
-// Process form data with validation
+// Process form data
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Validate CSRF token
     if (!validateCsrfToken($_POST['csrf_token'])) {
         $message = "Invalid form submission.";
     } else {
-        $name = sanitizeInput($_POST['Name']);
-        $department = sanitizeInput($_POST['Department']);
+        $name = $_SESSION['username'];
+        $department = $_SESSION['department'] ?? 'N/A'; // sasa system inachukua department yenyewe
         $current_date = date('Y-m-d');
         $current_time = date('H:i:s');
-        
-        // Input validation
-        if (empty($name) || empty($department)) {
-            $message = "Please fill all required fields.";
-        } else if (!in_array($department, ['Employee', 'Marketing', 'Field Student', 'Entrance'])) {
-            $message = "Invalid department selected.";
-        } else {
-            try {
-                // Check if user already has an entry today
-                $check_stmt = $conn->prepare("SELECT id FROM attendance WHERE Name = ? AND Date = ?");
-                $check_stmt->bind_param("ss", $name, $current_date);
-                $check_stmt->execute();
-                $check_stmt->store_result();
-                
-                if ($check_stmt->num_rows > 0) {
-                    // Update time out if record exists
-                    $update_stmt = $conn->prepare("UPDATE attendance SET Time_out = ? WHERE Name = ? AND Date = ?");
-                    $update_stmt->bind_param("sss", $current_time, $name, $current_date);
-                    
-                    if ($update_stmt->execute()) {
-                        $message = "Logout time has been recorded successfully $name";
-                    } else {
-                        $message = "Error in updating logout time.";
-                    }
-                    $update_stmt->close();
+
+        // Check kama user ana record leo
+        $check_stmt = $conn->prepare("SELECT id, Time_in, Time_out FROM attendance WHERE Name = ? AND Date = ?");
+        $check_stmt->bind_param("ss", $name, $current_date);
+        $check_stmt->execute();
+        $check_stmt->store_result();
+
+        if ($check_stmt->num_rows > 0) {
+            $check_stmt->bind_result($att_id, $time_in, $time_out);
+            $check_stmt->fetch();
+
+            // Ikiwa user anabonyeza Time Out
+            if (isset($_POST['timeout']) && empty($time_out)) {
+                $update_stmt = $conn->prepare("UPDATE attendance SET Time_out = ? WHERE id = ?");
+                $update_stmt->bind_param("si", $current_time, $att_id);
+                if ($update_stmt->execute()) {
+                    $message = "Logout time has been recorded successfully $name";
                 } else {
-                    // Insert new record if no existing entry
-                    $insert_stmt = $conn->prepare("INSERT INTO attendance (Name, Department, Date, Time_in) VALUES (?, ?, ?, ?)");
-                    $insert_stmt->bind_param("ssss", $name, $department, $current_date, $current_time);
-                    
-                    if ($insert_stmt->execute()) {
-                        $message = "Login time has been recorded successfully $name";
-                    } else {
-                        $message = "Error in inserting new record.";
-                    }
-                    $insert_stmt->close();
+                    $message = "Error updating logout time.";
                 }
-                $check_stmt->close();
-            } catch (Exception $e) {
-                error_log($e->getMessage());
-                $message = "An error occurred in the system. Please try again.";
+                $update_stmt->close();
+            } else {
+                $message = "You already recorded attendance today.";
+            }
+        } else {
+            // Ikiwa user anabonyeza Time In
+            if (isset($_POST['timein'])) {
+                $insert_stmt = $conn->prepare("INSERT INTO attendance (Name, Department, Date, Time_in) VALUES (?, ?, ?, ?)");
+                $insert_stmt->bind_param("ssss", $name, $department, $current_date, $current_time);
+                if ($insert_stmt->execute()) {
+                    $message = "Login time has been recorded successfully $name";
+                } else {
+                    $message = "Error inserting new record.";
+                }
+                $insert_stmt->close();
+            } else {
+                $message = "You need to Time In first.";
             }
         }
+
+        $check_stmt->close();
     }
 }
 
-// Get all attendance records for display with pagination
+// Fetch attendance log with pagination
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 10;
 $offset = ($page - 1) * $limit;
 
+$current_user = $_SESSION['username'];
+
 $attendance_data = [];
-$count_result = $conn->query("SELECT COUNT(*) as total FROM attendance");
-$total_records = $count_result->fetch_assoc()['total'];
+$count_stmt = $conn->prepare("SELECT COUNT(*) as total FROM attendance WHERE Name = ?");
+$count_stmt->bind_param("s", $current_user);
+$count_stmt->execute();
+$total_records = $count_stmt->get_result()->fetch_assoc()['total'];
 $total_pages = ceil($total_records / $limit);
+$count_stmt->close();
 
-$result = $conn->query("SELECT Name, Department, Date, Time_in, Time_out FROM attendance ORDER BY Date DESC, Time_in DESC LIMIT $limit OFFSET $offset");
-if ($result) {
-    $attendance_data = $result->fetch_all(MYSQLI_ASSOC);
-}
+$att_stmt = $conn->prepare("SELECT Name, Department, Date, Time_in, Time_out 
+                           FROM attendance 
+                           WHERE Name = ? 
+                           ORDER BY Date DESC, Time_in DESC 
+                           LIMIT ? OFFSET ?");
+$att_stmt->bind_param("sii", $current_user, $limit, $offset);
+$att_stmt->execute();
+$attendance_data = $att_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$att_stmt->close();
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -98,23 +104,22 @@ if ($result) {
     <section class="attendance-section">
       <form method="POST" action="attendance.php" id="attendance-form" autocomplete="off">
         <input type="hidden" name="csrf_token" value="<?php echo generateCsrfToken(); ?>">
+
+        <!-- Name from session -->
         <div class="form-group">
           <label for="Name">Name</label>
-          <input type="text" id="Name" name="Name" placeholder="Enter Name" required value="<?php echo isset($_SESSION['username']) ? htmlspecialchars($_SESSION['username']) : ''; ?>" />
-        </div>
-        
-        <div class="form-group">
-          <label for="Department">Department</label>
-          <select id="Department" name="Department" required>
-            <option value="">Select Department</option>
-            <option value="Employee">Employee</option>
-            <option value="Marketing">Marketing</option>
-            <option value="Field Student">Field Student</option>
-            <option value="Entrance">Entrance</option>
-          </select>
+          <p><strong><?php echo htmlspecialchars($_SESSION['username']); ?></strong></p>
         </div>
 
-        <button type="submit" class="btn-primary">Mark Attendance</button>
+        <!-- Department from session -->
+        <div class="form-group">
+          <label>Department</label>
+          <p><strong><?php echo htmlspecialchars($_SESSION['department'] ?? 'N/A'); ?></strong></p>
+        </div>
+
+        <!-- Buttons -->
+        <button type="submit" name="timein" class="btn-primary">Time In</button>
+        <button type="submit" name="timeout" class="btn-danger">Time Out</button>
       </form>
     </section>
 
