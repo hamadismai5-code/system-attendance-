@@ -1,10 +1,25 @@
 <?php
-// Enhanced attendance.php
-include 'session_check.php';
-include 'config.php';
+// Enhanced attendance.php - FIX DEPARTMENT LOGIC
+require_once 'config.php';
+require_once 'session_check.php';
 
 // Verify user is logged in
 validateSession();
+
+// Get user's actual department from database
+$user_stmt = $conn->prepare("SELECT u.department, d.name as department_name 
+                            FROM users u 
+                            LEFT JOIN departments d ON u.department = d.id 
+                            WHERE u.id = ?");
+$user_stmt->bind_param("i", $_SESSION['user_id']);
+$user_stmt->execute();
+$user_stmt->bind_result($department_id, $department_name);
+$user_stmt->fetch();
+$user_stmt->close();
+
+// Set department in session for consistency
+$_SESSION['department_id'] = $department_id;
+$_SESSION['department'] = $department_name;
 
 // Process form data
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -12,12 +27,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = "Invalid form submission.";
     } else {
         $name = $_SESSION['username'];
-        $department = $_SESSION['department'] ?? 'N/A'; // sasa system inachukua department yenyewe
+        $department = $department_id; // Use ID from database
         $current_date = date('Y-m-d');
         $current_time = date('H:i:s');
 
         // Check kama user ana record leo
-        $check_stmt = $conn->prepare("SELECT id, Time_in, Time_out FROM attendance WHERE Name = ? AND Date = ?");
+        $check_stmt = $conn->prepare("SELECT id, time_in, time_out FROM attendance WHERE name = ? AND date = ?");
         $check_stmt->bind_param("ss", $name, $current_date);
         $check_stmt->execute();
         $check_stmt->store_result();
@@ -28,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Ikiwa user anabonyeza Time Out
             if (isset($_POST['timeout']) && empty($time_out)) {
-                $update_stmt = $conn->prepare("UPDATE attendance SET Time_out = ? WHERE id = ?");
+                $update_stmt = $conn->prepare("UPDATE attendance SET time_out = ? WHERE id = ?");
                 $update_stmt->bind_param("si", $current_time, $att_id);
                 if ($update_stmt->execute()) {
                     $message = "Logout time has been recorded successfully $name";
@@ -42,8 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             // Ikiwa user anabonyeza Time In
             if (isset($_POST['timein'])) {
-                $insert_stmt = $conn->prepare("INSERT INTO attendance (Name, Department, Date, Time_in) VALUES (?, ?, ?, ?)");
-                $insert_stmt->bind_param("ssss", $name, $department, $current_date, $current_time);
+                $insert_stmt = $conn->prepare("INSERT INTO attendance (name, department, date, time_in) VALUES (?, ?, ?, ?)");
+                $insert_stmt->bind_param("siss", $name, $department, $current_date, $current_time);
                 if ($insert_stmt->execute()) {
                     $message = "Login time has been recorded successfully $name";
                 } else {
@@ -59,6 +74,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Rest of your existing attendance.php code remains the same...
+// [KOPY THE REST OF YOUR ORIGINAL attendance.php CODE FROM LINE 65 TO END]
 // Fetch attendance log with pagination
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 10;

@@ -1,6 +1,6 @@
 <?php
 session_start();
-include 'config.php';
+require_once 'config.php';
 
 // Set CSRF token if not exists
 if (empty($_SESSION['csrf_token'])) {
@@ -85,12 +85,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $lock_until = date('Y-m-d H:i:s', time() + $lockout_time);
                         $lock_stmt = $conn->prepare("UPDATE users SET login_attempts = ?, locked_until = ? WHERE id = ?");
                         $lock_stmt->bind_param("isi", $new_attempts, $lock_until, $user_id);
-                        $error = "Too many failed attempts. Account locked for 5 minutes.";
+                        $error = "Invalid username or password."; // Generic message
                     } else {
                         $lock_stmt = $conn->prepare("UPDATE users SET login_attempts = ? WHERE id = ?");
                         $lock_stmt->bind_param("ii", $new_attempts, $user_id);
-                        $remaining = $max_attempts - $new_attempts;
-                        $error = "Invalid password. $remaining attempts remaining.";
+                        $error = "Invalid username or password."; // Generic message
                     }
                     
                     $lock_stmt->execute();

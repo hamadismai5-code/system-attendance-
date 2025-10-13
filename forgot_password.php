@@ -1,6 +1,7 @@
 <?php
 session_start();
-include 'config.php';
+require_once 'config.php';
+
 
 // Initialize variables
 $error = '';

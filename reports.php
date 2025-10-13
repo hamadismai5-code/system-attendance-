@@ -1,359 +1,329 @@
-
 <?php
-include 'session_check.php';
+session_start();
 include 'config.php';
 
-// Use centralized functions for session and admin validation
-validateSession();
-if (!isAdminUser()) {
-    header("Location: attendance.php?error=access_denied");
+// Check if user is an admin
+if (!isset($_SESSION['username'])) {
+    header("Location: login.php");
+    exit();
+}
+// Make sure the user is an admin
+$stmt = $conn->prepare("SELECT is_admin FROM users WHERE username = ?");
+$stmt->bind_param("s", $_SESSION['username']);
+$stmt->execute();
+$stmt->bind_result($is_admin);
+$stmt->fetch();
+$stmt->close();
+
+if (!$is_admin) {
+    header("Location: attendance.php");
     exit();
 }
 
-// Chukua data kwa ajili ya ripoti
-$start_date_raw = sanitizeInput($_GET['start_date'] ?? '');
-$end_date_raw = sanitizeInput($_GET['end_date'] ?? '');
+// Generate reports
+$reports = [
+    'daily' => [],
+    'monthly' => [],
+    'user_summary' => []
+];
 
-// Validate dates or use defaults
-$start_date = validateDate($start_date_raw) ? $start_date_raw : date('Y-m-01');
-$end_date = validateDate($end_date_raw) ? $end_date_raw : date('Y-m-t');
-
-$attendance_data = [];
-$stmt = $conn->prepare("SELECT name, department, date, time_in, time_out 
+// Daily report
+$result = $conn->query("SELECT date, COUNT(*) as total_entries, 
+                        COUNT(DISTINCT name) as unique_users,
+                        SUM(CASE WHEN TIME(time_in) > '09:00:00' THEN 1 ELSE 0 END) as late_arrivals
                         FROM attendance 
-                        WHERE date BETWEEN ? AND ?
-                        ORDER BY date DESC");
-$stmt->bind_param("ss", $start_date, $end_date);
-$stmt->execute();
-$result = $stmt->get_result();
-$attendance_data = $result->fetch_all(MYSQLI_ASSOC);
+                        GROUP BY date 
+                        ORDER BY date DESC LIMIT 30");
+$reports['daily'] = $result->fetch_all(MYSQLI_ASSOC);
 
-// Include admin header if any
-include 'admin_header.php';
+// Monthly report
+$result = $conn->query("SELECT DATE_FORMAT(date, '%Y-%m') as month,
+                        COUNT(*) as total_entries,
+                        COUNT(DISTINCT name) as unique_users,
+                        AVG(CASE WHEN TIME(time_in) > '09:00:00' THEN 1 ELSE 0 END) * 100 as late_percentage
+                        FROM attendance 
+                        GROUP BY DATE_FORMAT(date, '%Y-%m')
+                        ORDER BY month DESC LIMIT 12");
+$reports['monthly'] = $result->fetch_all(MYSQLI_ASSOC);
+
+// User summary
+$result = $conn->query("SELECT name, 
+                        COUNT(*) as total_days,
+                        SUM(CASE WHEN TIME(time_in) > '09:00:00' THEN 1 ELSE 0 END) as late_days,
+                        AVG(TIMESTAMPDIFF(MINUTE, time_in, time_out))/60 as avg_hours
+                        FROM attendance 
+                        WHERE time_out IS NOT NULL
+                        GROUP BY name 
+                        ORDER BY total_days DESC");
+$reports['user_summary'] = $result->fetch_all(MYSQLI_ASSOC);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <title>Admin Panel - Reports</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-  <link rel="stylesheet" href="css/admin.css">
-  <style>
-   :root {
-      --primary: #6366f1;           /* Indigo-500 */
-      --primary-dark: #4338ca;      /* Indigo-700 */
-      --secondary: #06b6d4;         /* Cyan-500 */
-      --accent: #fbbf24;            /* Amber-400 */
-      --danger: #ef4444;            /* Red-500 */
-      --dark: #111827;              /* Gray-900 */
-      --gray: #6b7280;              /* Gray-500 */
-      --light: #f8fafc;             /* Gray-50 */
-      --white: #ffffff;
-      --shadow: 0 4px 12px rgba(99,102,241,0.08);
-      --radius: 14px;
-      --transition: all 0.3s cubic-bezier(.4,0,.2,1);
-    }
-    
-    
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: var(--light);
-      color: var(--dark);
-      line-height: 1.5;
-    }
-    
-    .admin-container {
-      display: flex;
-      min-height: 100vh;
-    }
-    
-    /* Sidebar */
-    .admin-sidebar {
-      width: 240px;
-      background: linear-gradient(180deg, var(--primary-dark) 80%, var(--dark) 100%);
-      color: var(--white);
-      position: fixed;
-      height: 100vh;
-      padding-top: 20px;
-      transition: var(--transition);
-      z-index: 100;
-      overflow-y: auto;
-      box-shadow: 2px 0 12px rgba(99,102,241,0.08);
-    }
-    
-    .admin-sidebar h2 {
-      text-align: center;
-      margin-bottom: 30px;
-      font-weight: 700;
-      font-size: 1.5rem;
-    }
-    
-    .admin-sidebar ul {
-      list-style: none;
-      padding: 0;
-    }
-    
-    .admin-sidebar ul li {
-      margin: 5px 15px;
-    }
-    
-    .admin-sidebar ul li a {
-      display: flex;
-      align-items: center;
-      padding: 12px 15px;
-      color: #e0e7ff;
-      text-decoration: none;
-      border-radius: 8px;
-      transition: var(--transition);
-    }
-    
-    .admin-sidebar ul li a:hover {
-      background: var(--primary);
-      color: #fff;
-      box-shadow: 0 2px 8px rgba(99,102,241,0.10);
-    }
-    
-    .admin-sidebar ul li.active a {
-      background: var(--accent);
-      color: var(--dark);
-      font-weight: 700;
-      box-shadow: 0 2px 8px rgba(251,191,36,0.10);
-    }
-    
-    .admin-sidebar ul li a i {
-      font-size: 1.2rem;
-      margin-right: 10px;
-    }
-    
-    /* Main Content */
-    .admin-content {
-      flex: 1;
-      margin-left: 240px;
-      padding: 20px;
-      transition: var(--transition);
-    }
-    
-    /* Header */
-    .admin-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 25px;
-      padding-bottom: 15px;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    
-    .admin-header h1 {
-      font-size: 1.8rem;
-      color: var(--dark);
-      font-weight: 700;
-    }
-    
-    .admin-user {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    
-    .admin-user span {
-      font-weight: 500;
-    }
-    
-    .user-avatar {
-      width: 40px;
-      height: 40px;
-      background: var(--primary);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: 700;
-      font-size: 1.1rem;
-    }
-    
-    /* Report System */
-    .report-system {
-      display: grid;
-      gap: 20px;
-    }
-    
-    .date-filter {
-      background: var(--white);
-      padding: 20px;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      flex-wrap: wrap;
-    }
-    
-    .date-filter label {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      font-size: 0.9rem;
-      color: black;
-    }
-    
-    .date-filter input {
-      padding: 8px 12px;
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-    }
-    
-    .date-filter button {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 8px 15px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: var(--transition);
-    }
-    
-    .date-filter button:hover {
-      background: var(--primary-dark);
-    }
-    
-    .export-btn {
-      background: var(--secondary);
-      color: white;
-      text-decoration: none;
-      padding: 8px 15px;
-      border-radius: 6px;
-      font-weight: 600;
-      transition: var(--transition);
-    }
-    
-    .export-btn:hover {
-      background: #0d9c6f;
-    }
-    
-    .report-table {
-      width: 100%;
-      border-collapse: collapse;
-      background: var(--white);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-    
-    .report-table th, 
-    .report-table td {
-      text-align: left;
-      padding: 12px 15px;
-      border-bottom: 1px solid #e5e7eb;
-      font-size: 0.9rem;
-      color: var(--dark);
-    }
-    
-    .report-table th {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      color: var(--white);
-      font-weight: 700;
-      background: var(--primary);
-      letter-spacing: 1px;
-      border-bottom: 2px solid var(--primary-dark);
-    }
-    
-    .report-table tr:last-child td {
-      border-bottom: none;
-    }
-    
-    /* Responsive */
-    @media (max-width: 992px) {
-      .admin-sidebar {
-        width: 80px;
-      }
-      
-      .admin-sidebar h2,
-      .admin-sidebar ul li a span {
-        display: none;
-      }
-      
-      .admin-content {
-        margin-left: 80px;
-      }
-    }
-    
-    @media (max-width: 768px) {
-      .admin-header {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      
-      .admin-user {
-        margin-top: 10px;
-      }
-      
-      .date-filter {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Admin Panel - Reports</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link rel="stylesheet" href="css/admin.css">
+    <style>
+        .reports-container {
+            padding: 20px;
+        }
+        
+        .report-section {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 25px;
+            margin-bottom: 30px;
+            transition: var(--transition);
+        }
+        
+        .report-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99,102,241,0.15);
+        }
+        
+        .report-section h3 {
+            color: var(--dark);
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--primary);
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .report-table th {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: var(--white);
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+        
+        .report-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border);
+            color: var(--dark);
+        }
+        
+        .report-table tr:hover td {
+            background: var(--light);
+        }
+        
+        .percentage-badge {
+            background: var(--success);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .percentage-badge.warning {
+            background: var(--accent);
+        }
+        
+        .percentage-badge.danger {
+            background: var(--danger);
+        }
+        
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .btn-export {
+            background: var(--success);
+            color: var(--white);
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-export:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+        
+        .btn-export.secondary {
+            background: var(--primary);
+        }
+        
+        .btn-export.secondary:hover {
+            background: var(--primary-dark);
+        }
+    </style>
 </head>
 <body>
+  <div class="admin-container">
+    <!-- SIDEBAR IN THIS PAGE -->
+    <aside class="admin-sidebar">
+      <h2>Admin Panel</h2>
+      <ul>
+        <li>
+          <a href="admin_dashboard.php"><i class='bx bxs-dashboard'></i><span> Dashboard</span></a>
+        </li>
+        <li>
+          <a href="my_attendance.php"><i class='bx bxs-time'></i><span> My Attendance</span></a>
+        </li>
+        <li>
+          <a href="users.php"><i class='bx bxs-user'></i><span> Users</span></a>
+        </li>
+        <li>
+          <a href="departments.php"><i class='bx bxs-building'></i><span> Departments</span></a>
+        </li>
+        <li class="active">
+          <a href="reports.php"><i class='bx bxs-report'></i><span> Reports</span></a>
+        </li>
+        <li>
+          <a href="analytics.php"><i class='bx bxs-analyse'></i><span> Analytics</span></a>
+        </li>
+        <li><a href="logout.php"><i class='bx bxs-log-out'></i><span> Logout</span></a></li>
+      </ul>
+    </aside>
 
-      <div class="report-system">
-        <!-- Fomu ya kuchagua tarehe -->
-        <form method="GET" class="date-filter">
-            <label>Start Date:
-                <input type="date" name="start_date" value="<?= $start_date ?>">
-            </label>
-            <label>End Date:
-                <input type="date" name="end_date" value="<?= $end_date ?>">
-            </label>
-            <button type="submit">Filter</button>
-            <a href="export.php?start_date=<?= $start_date ?>&end_date=<?= $end_date ?>" class="export-btn">Export to Excel</a>
-        </form>
+    <main class="admin-main">
+      <div class="admin-content">
+        <header class="admin-header">
+          <div class="header-left">
+            <button class="menu-toggle" id="menuToggle">
+              <i class='bx bx-menu'></i>
+            </button>
+            <h1>Attendance Reports</h1>
+          </div>
+          <div class="header-right">
+            <div class="user-menu">
+              <span>Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></span>
+              <div class="user-actions">
+                <a href="profile.php"><i class='bx bxs-user'></i> Profile</a>
+                <a href="logout.php"><i class='bx bxs-log-out'></i> Logout</a>
+              </div>
+            </div>
+          </div>
+        </header>
 
-        <!-- Matokeo ya ripoti -->
-        <table class="report-table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Department</th>
-                    <th>Date</th>
-                    <th>Time In</th>
-                    <th>Time Out</th>
-                    <th>Hours</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($attendance_data as $record): 
-                    $hours = '--';
-                    if ($record['time_out']) {
-                        $time_in = new DateTime($record['time_in']);
-                        $time_out = new DateTime($record['time_out']);
-                        $diff = $time_out->diff($time_in);
-                        $hours = $diff->h . 'h ' . $diff->i . 'm';
-                    }
-                ?>
-                <tr>
-                    <td><?= htmlspecialchars($record['name']) ?></td>
-                    <td><?= htmlspecialchars($record['department']) ?></td>
-                    <td><?= $record['date'] ?></td>
-                    <td><?= $record['time_in'] ?></td>
-                    <td><?= $record['time_out'] ?: '--' ?></td>
-                    <td><?= $hours ?></td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+        <div class="reports-container">
+            <!-- Export Buttons -->
+            <div class="export-buttons">
+                <a href="export_csv.php" class="btn-export">
+                    <i class='bx bx-download'></i> Export CSV
+                </a>
+                <a href="export_pdf.php" class="btn-export secondary">
+                    <i class='bx bxs-file-pdf'></i> Export PDF
+                </a>
+            </div>
+
+            <!-- Daily Report -->
+            <section class="report-section">
+                <h3><i class='bx bx-calendar'></i> Daily Attendance Report (Last 30 Days)</h3>
+                <div class="table-container">
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Total Entries</th>
+                                <th>Unique Users</th>
+                                <th>Late Arrivals</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($reports['daily'] as $daily): ?>
+                            <tr>
+                                <td><?= $daily['date'] ?></td>
+                                <td><?= $daily['total_entries'] ?></td>
+                                <td><?= $daily['unique_users'] ?></td>
+                                <td>
+                                    <span class="percentage-badge <?= $daily['late_arrivals'] > 0 ? 'warning' : '' ?>">
+                                        <?= $daily['late_arrivals'] ?>
+                                    </span>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Monthly Report -->
+            <section class="report-section">
+                <h3><i class='bx bx-stats'></i> Monthly Summary Report</h3>
+                <div class="table-container">
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th>Total Entries</th>
+                                <th>Unique Users</th>
+                                <th>Late Arrival %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($reports['monthly'] as $monthly): ?>
+                            <tr>
+                                <td><?= date('F Y', strtotime($monthly['month'] . '-01')) ?></td>
+                                <td><?= $monthly['total_entries'] ?></td>
+                                <td><?= $monthly['unique_users'] ?></td>
+                                <td>
+                                    <span class="percentage-badge <?= $monthly['late_percentage'] > 20 ? 'danger' : ($monthly['late_percentage'] > 10 ? 'warning' : '') ?>">
+                                        <?= number_format($monthly['late_percentage'], 1) ?>%
+                                    </span>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- User Summary -->
+            <section class="report-section">
+                <h3><i class='bx bx-user'></i> User Performance Summary</h3>
+                <div class="table-container">
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Total Days</th>
+                                <th>Late Days</th>
+                                <th>Average Hours</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($reports['user_summary'] as $user): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($user['name']) ?></td>
+                                <td><?= $user['total_days'] ?></td>
+                                <td>
+                                    <span class="percentage-badge <?= $user['late_days'] > 0 ? 'warning' : '' ?>">
+                                        <?= $user['late_days'] ?>
+                                    </span>
+                                </td>
+                                <td><?= number_format($user['avg_hours'], 2) ?> hours</td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
       </div>
+    </main>
+  </div>
 </body>
 </html>

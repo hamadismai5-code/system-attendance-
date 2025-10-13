@@ -1,11 +1,17 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+session_start(); // Needed for CSRF token
+require_once 'config.php';
+
+// Set CSRF token if not exists
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-include 'config.php';
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Validate CSRF token
+    if (!isset($_POST['csrf_token']) || !validateCsrfToken($_POST['csrf_token'])) {
+        $error = "Invalid form submission. Please try again.";
+    } else {
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
@@ -31,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "Failed to register user.";
         }
         $insert_stmt->close();
+    }
     }
     $stmt->close();
 }
@@ -410,6 +417,7 @@ body{
     <?php if (isset($error)) echo "<p style='color:red;'>$error</p>"; ?>
 
     <form method="POST" action="">
+        <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
         <div class="input-box">
             <input type="text" name="username" placeholder="Username" required />
             <i class='bx bxs-user'></i>

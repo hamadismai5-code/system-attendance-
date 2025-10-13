@@ -1,6 +1,7 @@
 <?php
 session_start();
-include 'config.php';
+require_once 'config.php';
+
 
 // Angalia kama ni admin
 if (!isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
@@ -12,7 +13,7 @@ if (!isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
 $start_date = $_GET['start_date'] ?? date('Y-m-01');
 $end_date = $_GET['end_date'] ?? date('Y-m-t');
 
-$stmt = $conn->prepare("SELECT name, department, date, time_in, time_out 
+$stmt = $conn->prepare("SELECT name, Department as department, date, time_in, time_out 
                         FROM attendance 
                         WHERE date BETWEEN ? AND ?
                         ORDER BY date DESC");
@@ -26,7 +27,6 @@ header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
 header('Content-Disposition: attachment; filename="attendance_report_'.date('Ymd').'.xls"');
 header('Pragma: no-cache');
 header('Expires: 0');
-
 
 // Output Excel file
 echo "Name\tDepartment\tDate\tTime In\tTime Out\tHours\n";

@@ -3,12 +3,13 @@
 ?>
       </div> <!-- Close .page-content -->
     </main> <!-- Close .admin-content -->
-  </div> <!-- Close .admin-container -->
-  
-  <!-- Include Chart.js for charts -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  
-  <script>
+  </div> <!-- Close .admin-main -->
+</div> <!-- Close .admin-container -->
+
+<!-- Include Chart.js for charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
     document.addEventListener('DOMContentLoaded', function() {
       // Menu toggle functionality for sidebar
       const menuToggle = document.getElementById('menuToggle');
