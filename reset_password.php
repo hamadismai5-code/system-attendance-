@@ -68,16 +68,202 @@ if (isset($_GET['token'])) {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Reset Password - Attendance System</title>
-  <link rel="stylesheet" href="css/form1.css" />
   <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: poppins, sans-serif;
+    }
+
+   body{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: -moz-linear-gradient(45deg, #4c72ec, #1a1a1a);
+    background: -webkit-linear-gradient(45deg, #4c72ec, #1a1a1a);
+    background: linear-gradient(45deg, #4c72ec, #1a1a1a);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-size: cover;
+    background-position: center;
+    padding: 20px;
+}
+
+    .wrapper {
+        position: relative;
+        width: 100%;
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid rgba(255, 255, 255, .2);
+        box-shadow: 0 0 20px rgba(0, 0, 0, .2);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        max-width: 400px;
+        margin: 0 auto;
+        color: #fff;
+        border-radius: 18px;
+        padding: 30px 25px;
+    }
+
+    .wrapper::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: inherit;
+        border-radius: inherit;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        z-index: -1;
+    }
+
+    .wrapper h1 {
+        font-size: 36px;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    .input-box {
+        position: relative;
+        background: transparent;
+        width: 100%;
+        height: 50px;
+        margin: 25px 0;
+    }
+
+    .input-box input {
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.1);
+        outline: none;
+        border: 2px solid rgba(255, 255, 255, .2);
+        border-radius: 40px;
+        font-size: 16px;
+        color: #fff;
+        padding: 0 45px 0 20px;
+        transition: all 0.3s ease;
+    }
+
+    .input-box input:hover {
+        border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    .input-box input:focus {
+        border-color: #ffd700;
+        box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    .input-box input:focus + i {
+        color: #ffd700;
+    }
+
+    .input-box input::placeholder {
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .input-box i {
+        position: absolute;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 20px;
+        color: #fff;
+        opacity: 0.8;
+        pointer-events: none;
+        transition: color 0.3s ease;
+    }
+
+    .wrapper .btn {
+        width: 100%;
+        height: 45px;
+        background: #fff;
+        border: none;
+        outline: none;
+        border-radius: 40px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, .1);
+        cursor: pointer;
+        font-size: 16px;
+        color: #333;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+        background: #4c72ec;
+        color: #fff;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .wrapper p a {
+        color: #eef0f1;
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.3s ease, text-decoration 0.3s ease;
+    }
+    .wrapper p a:hover,
+    .wrapper p a:focus {
+        color: #ffd700;
+        text-decoration: underline;
+    }
+
     .password-strength {
       margin-top: 5px;
       font-size: 12px;
+      padding-left: 20px;
+      position: absolute;
+      bottom: -20px;
     }
     .strength-weak { color: red; }
     .strength-medium { color: orange; }
     .strength-strong { color: green; }
+
+    @media (max-width: 480px) {
+        body {
+            padding: 15px;
+            align-items: flex-start;
+            padding-top: 40px;
+        }
+        
+        .wrapper {
+            padding: 25px 20px;
+            margin: 0;
+            max-width: 100%;
+        }
+        
+        .wrapper h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        .input-box {
+            height: 45px;
+            margin: 20px 0;
+        }
+        
+        .input-box input {
+            font-size: 15px;
+            padding: 0 40px 0 15px;
+        }
+        
+        .input-box i {
+            right: 15px;
+            font-size: 18px;
+        }
+        
+        .wrapper .btn {
+            height: 45px;
+            font-size: 15px;
+        }
+    }
   </style>
 </head>
 <body>
@@ -85,10 +271,10 @@ if (isset($_GET['token'])) {
     <h1>Reset Password</h1>
     <?php 
     if (!empty($error)) {
-        echo "<p style='color:red; text-align:center;'>$error</p>";
+        echo "<p style='color:#ffcccc; text-align:center; background: rgba(255,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 15px;'>$error</p>";
     }
     if (!empty($success)) {
-        echo "<p style='color:green; text-align:center;'>$success</p>";
+        echo "<p style='color:#ccffcc; text-align:center; background: rgba(0,255,0,0.15); padding: 10px; border-radius: 8px; margin-bottom: 15px;'>$success</p>";
     }
     
     if ($valid_token && empty($success)) {

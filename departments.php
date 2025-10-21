@@ -1,27 +1,16 @@
 <?php
 session_start();
 include 'config.php';
+include 'session_check.php';
 
-// Angalia kama ni admin
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
-    exit();
-}
-
-// Hakikisha ni admin
-$stmt = $conn->prepare("SELECT is_admin FROM users WHERE username = ?");
-$stmt->bind_param("s", $_SESSION['username']);
-$stmt->execute();
-$stmt->bind_result($is_admin);
-$stmt->fetch();
-$stmt->close();
-
-if (!$is_admin) {
+// Check login and admin status
+validateSession();
+if (!isAdminUser()) {
     header("Location: attendance.php");
     exit();
 }
 
-// Chukua idara zote
+// Fetch all departments
 $departments = [];
 $result = $conn->query("SELECT id, name FROM departments");
 if ($result) {
@@ -29,24 +18,35 @@ if ($result) {
 }
 
 // Ongeza idara mpya
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_department'])) {
-    $name = $_POST['name'];
-
-    $stmt = $conn->prepare("INSERT INTO departments (name) VALUES (?)");
-    $stmt->bind_param("s", $name);
-    $stmt->execute();
-    header("Location: departments.php");
-    exit();
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_department']) && validateCsrfToken($_POST['csrf_token'])) {
+    $name = sanitizeInput($_POST['name']);
+    if (!empty($name)) {
+        $stmt = $conn->prepare("INSERT INTO departments (name) VALUES (?)");
+        $stmt->bind_param("s", $name);
+        if ($stmt->execute()) {
+            header("Location: departments.php?success=added");
+        } else {
+            header("Location: departments.php?error=add_failed");
+        }
+        $stmt->close();
+        exit();
+    }
 }
 
 // Futa idara
-if (isset($_GET['delete'])) {
+if (isset($_GET['delete']) && isset($_GET['csrf_token']) && validateCsrfToken($_GET['csrf_token'])) {
     $id = (int)$_GET['delete'];
-    $stmt = $conn->prepare("DELETE FROM departments WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    header("Location: departments.php");
-    exit();
+    if ($id > 0) {
+        $stmt = $conn->prepare("DELETE FROM departments WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        if ($stmt->execute()) {
+            header("Location: departments.php?success=deleted");
+        } else {
+            header("Location: departments.php?error=delete_failed");
+        }
+        $stmt->close();
+        exit();
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -212,8 +212,9 @@ if (isset($_GET['delete'])) {
             <!-- Fomu ya kuongeza idara -->
             <div class="department-form-container">
                 <h3><i class='bx bx-plus'></i> Add New Department</h3>
-                <form method="POST" class="form-group">
-                    <input type="text" name="name" placeholder="Department Name" required>
+                <form method="POST" action="departments.php" class="form-group">
+                    <input type="hidden" name="csrf_token" value="<?= generateCsrfToken(); ?>">
+                    <input type="text" name="name" placeholder="Enter new department name" required>
                     <button type="submit" name="add_department" class="btn-primary">Add Department</button>
                 </form>
             </div>
@@ -244,7 +245,7 @@ if (isset($_GET['delete'])) {
                                     <td>
                                         <div class="action-buttons">
                                             <a href="edit_department.php?id=<?= $dept['id'] ?>" class="btn-edit">Edit</a>
-                                            <a href="departments.php?delete=<?= $dept['id'] ?>" class="btn-delete" onclick="return confirm('Are you sure you want to delete this department?')">Delete</a>
+                                            <a href="departments.php?delete=<?= $dept['id'] ?>&csrf_token=<?= generateCsrfToken(); ?>" class="btn-delete" onclick="return confirm('Are you sure you want to delete this department? This action cannot be undone.')">Delete</a>
                                         </div>
                                     </td>
                                 </tr>

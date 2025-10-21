@@ -10,15 +10,28 @@ if (!isAdminUser()) {
     exit();
 }
 
+// ==================== Date Filtering Logic ====================
+$default_days = 30;
+$start_date = sanitizeInput($_GET['start_date'] ?? date('Y-m-d', strtotime("-$default_days days")));
+$end_date = sanitizeInput($_GET['end_date'] ?? date('Y-m-d'));
+
+// Validate dates to ensure they are in the correct format
+$start_date = validateDate($start_date) ? $start_date : date('Y-m-d', strtotime("-$default_days days"));
+$end_date = validateDate($end_date) ? $end_date : date('Y-m-d');
+
 // ==================== SECURE Data Fetching ====================
 // General stats - USING PREPARED STATEMENTS
-$stats_query = "SELECT 
-    (SELECT COUNT(DISTINCT name) FROM attendance) as total_users,
-    (SELECT COUNT(*) FROM attendance) as total_records,
+$stats_stmt = $conn->prepare("SELECT 
+    (SELECT COUNT(*) FROM users) as total_users,
+    (SELECT COUNT(*) FROM attendance WHERE date BETWEEN ? AND ?) as total_records,
     (SELECT COUNT(*) FROM attendance WHERE date = CURDATE()) as today_records,
-    (SELECT COUNT(DISTINCT name) FROM attendance WHERE date = CURDATE()) as present_today";
-$stats_result = $conn->query($stats_query);
+    (SELECT COUNT(DISTINCT name) FROM attendance WHERE date = CURDATE()) as present_today
+");
+$stats_stmt->bind_param("ss", $start_date, $end_date);
+$stats_stmt->execute();
+$stats_result = $stats_stmt->get_result();
 $stats = $stats_result->fetch_assoc();
+$stats_stmt->close();
 
 // Department stats - SECURE
 $dept_stats = [];
@@ -43,8 +56,10 @@ $dept_stmt->close();
 $recent_attendance = [];
 $recent_stmt = $conn->prepare("SELECT a.name, d.name as department, a.date, a.time_in, a.time_out 
                            FROM attendance a
-                           JOIN departments d ON a.department = d.id
+                           LEFT JOIN departments d ON a.department = d.id
+                           WHERE a.date BETWEEN ? AND ?
                            ORDER BY a.date DESC, a.time_in DESC LIMIT 10");
+$recent_stmt->bind_param("ss", $start_date, $end_date);
 $recent_stmt->execute();
 $recent_result = $recent_stmt->get_result();
 $recent_attendance = $recent_result->fetch_all(MYSQLI_ASSOC);
@@ -59,10 +74,11 @@ $weekly_stmt = $conn->prepare("
         COUNT(DISTINCT CASE WHEN TIME(time_in) > '09:00:00' THEN name END) as late_arrivals,
         COUNT(DISTINCT CASE WHEN time_out IS NOT NULL AND TIME(time_out) < '17:00:00' THEN name END) as early_departures
     FROM attendance
-    WHERE date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+    WHERE date BETWEEN ? AND ?
     GROUP BY DATE(date)
     ORDER BY day ASC
 ");
+$weekly_stmt->bind_param("ss", $start_date, $end_date);
 $weekly_stmt->execute();
 $weekly_result = $weekly_stmt->get_result();
 $weekly_trend = $weekly_result->fetch_all(MYSQLI_ASSOC);
@@ -91,13 +107,14 @@ $top_stmt = $conn->prepare("
     LEFT JOIN
         departments d ON u.department = d.id
     WHERE
-        a.date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        a.date BETWEEN ? AND ?
     GROUP BY
         u.id, u.username, d.name
     ORDER BY
         performance_score DESC, late_days ASC
     LIMIT 5
 ");
+$top_stmt->bind_param("ss", $start_date, $end_date);
 $top_stmt->execute();
 $top_result = $top_stmt->get_result();
 $top_performers = $top_result->fetch_all(MYSQLI_ASSOC);
@@ -116,9 +133,6 @@ $notif_stmt->execute();
 $notif_result = $notif_stmt->get_result();
 $notifications = $notif_result->fetch_all(MYSQLI_ASSOC);
 $notif_stmt->close();
-
-// Free result sets
-$stats_result->free();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -129,6 +143,51 @@ $stats_result->free();
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <link rel="stylesheet" href="css/admin.css">
     <style>
+        /* Date Filter Form Styles */
+        .date-filter-form {
+            background: var(--white);
+            padding: 20px 30px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+            margin: 30px;
+        }
+
+        .date-filter-form .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .date-filter-form label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--gray);
+        }
+
+        .date-filter-form input[type="date"] {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: var(--dark);
+        }
+
+        .date-filter-form .btn-primary {
+            padding: 10px 20px;
+            align-self: flex-end;
+        }
+
+        .date-filter-form .clear-filter {
+            align-self: flex-end;
+            color: var(--gray);
+            font-size: 0.85rem;
+            text-decoration: none;
+            margin-left: 10px;
+        }
         /* Enhanced Dashboard Grid Layout */
         .dashboard-grid {
             display: grid;
@@ -325,6 +384,22 @@ $stats_result->free();
             </div>
           </div>
         </header>
+
+        <!-- Date Filter Form -->
+        <section>
+            <form method="GET" action="" class="date-filter-form">
+                <div class="form-group">
+                    <label for="start_date">Start Date</label>
+                    <input type="date" id="start_date" name="start_date" value="<?= htmlspecialchars($start_date) ?>">
+                </div>
+                <div class="form-group">
+                    <label for="end_date">End Date</label>
+                    <input type="date" id="end_date" name="end_date" value="<?= htmlspecialchars($end_date) ?>">
+                </div>
+                <button type="submit" class="btn-primary">Apply Filter</button>
+                <a href="admin_dashboard.php" class="clear-filter">Clear</a>
+            </form>
+        </section>
         
         <!-- Stats Cards -->
         <section class="admin-stats">
@@ -365,7 +440,7 @@ $stats_result->free();
         <div class="dashboard-grid">
           <section class="dashboard-section grid-col-span-2">
             <div class="section-header">
-              <h3>Weekly Attendance Trend</h3>
+              <h3>Attendance Trend</h3>
               <a href="analytics.php">View Details <i class='bx bx-right-arrow-alt'></i></a>
             </div>
             <div class="chart-container">
@@ -375,7 +450,7 @@ $stats_result->free();
           
           <section class="dashboard-section">
             <div class="section-header">
-              <h3>Department Distribution</h3>
+              <h3>Department Punctuality</h3>
               <a href="departments.php">Manage <i class='bx bx-right-arrow-alt'></i></a>
             </div>
             <div class="chart-container">
@@ -406,7 +481,7 @@ $stats_result->free();
                   <?php foreach ($recent_attendance as $record): ?>
                   <tr>
                     <td><?= htmlspecialchars($record['name']) ?></td>
-                    <td><?= htmlspecialchars($record['department']) ?></td>
+                    <td><?= htmlspecialchars($record['department'] ?? 'N/A') ?></td>
                     <td><?= htmlspecialchars($record['date']) ?></td>
                     <td><?= htmlspecialchars($record['time_in']) ?></td>
                     <td><?= htmlspecialchars($record['time_out'] ?: '--') ?></td>

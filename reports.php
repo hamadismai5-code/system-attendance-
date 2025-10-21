@@ -1,21 +1,11 @@
 <?php
 session_start();
 include 'config.php';
+include 'session_check.php';
 
-// Check if user is an admin
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
-    exit();
-}
-// Make sure the user is an admin
-$stmt = $conn->prepare("SELECT is_admin FROM users WHERE username = ?");
-$stmt->bind_param("s", $_SESSION['username']);
-$stmt->execute();
-$stmt->bind_result($is_admin);
-$stmt->fetch();
-$stmt->close();
-
-if (!$is_admin) {
+// Check login and admin status
+validateSession();
+if (!isAdminUser()) {
     header("Location: attendance.php");
     exit();
 }
@@ -28,26 +18,30 @@ $reports = [
 ];
 
 // Daily report
-$result = $conn->query("SELECT date, COUNT(*) as total_entries, 
+$daily_stmt = $conn->prepare("SELECT date, COUNT(*) as total_entries, 
                         COUNT(DISTINCT name) as unique_users,
                         SUM(CASE WHEN TIME(time_in) > '09:00:00' THEN 1 ELSE 0 END) as late_arrivals
                         FROM attendance 
                         GROUP BY date 
                         ORDER BY date DESC LIMIT 30");
-$reports['daily'] = $result->fetch_all(MYSQLI_ASSOC);
+$daily_stmt->execute();
+$reports['daily'] = $daily_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$daily_stmt->close();
 
 // Monthly report
-$result = $conn->query("SELECT DATE_FORMAT(date, '%Y-%m') as month,
+$monthly_stmt = $conn->prepare("SELECT DATE_FORMAT(date, '%Y-%m') as month,
                         COUNT(*) as total_entries,
                         COUNT(DISTINCT name) as unique_users,
                         AVG(CASE WHEN TIME(time_in) > '09:00:00' THEN 1 ELSE 0 END) * 100 as late_percentage
                         FROM attendance 
                         GROUP BY DATE_FORMAT(date, '%Y-%m')
                         ORDER BY month DESC LIMIT 12");
-$reports['monthly'] = $result->fetch_all(MYSQLI_ASSOC);
+$monthly_stmt->execute();
+$reports['monthly'] = $monthly_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$monthly_stmt->close();
 
 // User summary
-$result = $conn->query("SELECT name, 
+$user_summary_stmt = $conn->prepare("SELECT name, 
                         COUNT(*) as total_days,
                         SUM(CASE WHEN TIME(time_in) > '09:00:00' THEN 1 ELSE 0 END) as late_days,
                         AVG(TIMESTAMPDIFF(MINUTE, time_in, time_out))/60 as avg_hours
@@ -55,7 +49,9 @@ $result = $conn->query("SELECT name,
                         WHERE time_out IS NOT NULL
                         GROUP BY name 
                         ORDER BY total_days DESC");
-$reports['user_summary'] = $result->fetch_all(MYSQLI_ASSOC);
+$user_summary_stmt->execute();
+$reports['user_summary'] = $user_summary_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$user_summary_stmt->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">

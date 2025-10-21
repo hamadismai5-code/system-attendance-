@@ -1,21 +1,11 @@
 <?php
 session_start();
 include 'config.php';
+include 'session_check.php';
 
-// Check if user is an admin
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
-    exit();
-}
-// Make sure the user is an admin
-$stmt = $conn->prepare("SELECT is_admin FROM users WHERE username = ?");
-$stmt->bind_param("s", $_SESSION['username']);
-$stmt->execute();
-$stmt->bind_result($is_admin);
-$stmt->fetch();
-$stmt->close();
-
-if (!$is_admin) {
+// Check login and admin status
+validateSession();
+if (!isAdminUser()) {
     header("Location: attendance.php");
     exit();
 }
@@ -27,27 +17,37 @@ $analytics = [
     'average_hours' => []
 ];
 
-// People who were late (after 9:00 AM)
-$result = $conn->query("SELECT name, department, date, time_in 
-                        FROM attendance 
-                        WHERE TIME(time_in) > '09:00:00'
-                        ORDER BY date DESC LIMIT 10");
-$analytics['late_arrivals'] = $result->fetch_all(MYSQLI_ASSOC);
+// People who were late (after 9:00 AM) - SECURE
+$late_stmt = $conn->prepare("SELECT a.name, d.name as department_name, a.date, a.time_in 
+                            FROM attendance a
+                            LEFT JOIN departments d ON a.department = d.id
+                            WHERE TIME(a.time_in) > '09:00:00'
+                            ORDER BY a.date DESC, a.time_in DESC LIMIT 10");
+$late_stmt->execute();
+$analytics['late_arrivals'] = $late_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$late_stmt->close();
 
-// People who left early (before 5:00 PM)
-$result = $conn->query("SELECT name, department, date, time_out 
-                        FROM attendance 
-                        WHERE TIME(time_out) < '17:00:00' AND time_out IS NOT NULL
-                        ORDER BY date DESC LIMIT 10");
-$analytics['early_departures'] = $result->fetch_all(MYSQLI_ASSOC);
+// People who left early (before 5:00 PM) - SECURE
+$early_stmt = $conn->prepare("SELECT a.name, d.name as department_name, a.date, a.time_out 
+                             FROM attendance a
+                             LEFT JOIN departments d ON a.department = d.id
+                             WHERE TIME(a.time_out) < '17:00:00' AND a.time_out IS NOT NULL
+                             ORDER BY a.date DESC, a.time_out DESC LIMIT 10");
+$early_stmt->execute();
+$analytics['early_departures'] = $early_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$early_stmt->close();
 
-// Average hours for each department
-$result = $conn->query("SELECT department, 
-                        AVG(TIMESTAMPDIFF(MINUTE, time_in, time_out))/60 as avg_hours
-                        FROM attendance 
-                        WHERE time_out IS NOT NULL
-                        GROUP BY department");
-$analytics['average_hours'] = $result->fetch_all(MYSQLI_ASSOC);
+// Average hours for each department - SECURE
+$avg_stmt = $conn->prepare("SELECT d.name as department_name, 
+                           AVG(TIMESTAMPDIFF(MINUTE, a.time_in, a.time_out))/60 as avg_hours
+                           FROM attendance a
+                           JOIN departments d ON a.department = d.id
+                           WHERE a.time_out IS NOT NULL
+                           GROUP BY a.department, d.name
+                           ORDER BY d.name");
+$avg_stmt->execute();
+$analytics['average_hours'] = $avg_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$avg_stmt->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -199,7 +199,7 @@ $analytics['average_hours'] = $result->fetch_all(MYSQLI_ASSOC);
                             <?php foreach ($analytics['late_arrivals'] as $record): ?>
                             <tr>
                                 <td><?= htmlspecialchars($record['name']) ?></td>
-                                <td><?= htmlspecialchars($record['department']) ?></td>
+                                <td><?= htmlspecialchars($record['department_name'] ?? 'N/A') ?></td>
                                 <td><?= $record['date'] ?></td>
                                 <td style="color: var(--danger); font-weight: 600;"><?= $record['time_in'] ?></td>
                             </tr>
@@ -224,7 +224,7 @@ $analytics['average_hours'] = $result->fetch_all(MYSQLI_ASSOC);
                             <?php foreach ($analytics['early_departures'] as $record): ?>
                             <tr>
                                 <td><?= htmlspecialchars($record['name']) ?></td>
-                                <td><?= htmlspecialchars($record['department']) ?></td>
+                                <td><?= htmlspecialchars($record['department_name'] ?? 'N/A') ?></td>
                                 <td><?= $record['date'] ?></td>
                                 <td style="color: var(--accent); font-weight: 600;"><?= $record['time_out'] ?></td>
                             </tr>
@@ -246,7 +246,7 @@ $analytics['average_hours'] = $result->fetch_all(MYSQLI_ASSOC);
                         <tbody>
                             <?php foreach ($analytics['average_hours'] as $record): ?>
                             <tr>
-                                <td><?= htmlspecialchars($record['department']) ?></td>
+                                <td><?= htmlspecialchars($record['department_name']) ?></td>
                                 <td>
                                     <span class="hours-badge">
                                         <?= number_format($record['avg_hours'], 2) ?> hours
