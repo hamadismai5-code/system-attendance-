@@ -195,6 +195,18 @@ if (isset($_GET['delete'])) {
             margin-bottom: 15px;
             opacity: 0.5;
         }
+
+        .user-table thead th {
+             background: linear-gradient(135deg, var(--dark), #1c2a49ff);
+            color: var(--white);
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+    </style>
+        
     </style>
 </head>
 <body>

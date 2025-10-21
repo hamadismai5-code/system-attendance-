@@ -18,6 +18,10 @@ define('DB_NAME', 'attendance_db');
 define('CSS_PATH', 'css/');
 define('JS_PATH', 'js/');
 
+// Define the base URL of the application
+$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
+define('BASE_URL', $protocol . $_SERVER['HTTP_HOST'] . '/attendance_project');
+
 // Error reporting - only show errors in development
 if ($_SERVER['SERVER_NAME'] === 'localhost' || $_SERVER['SERVER_ADDR'] === '127.0.0.1') {
     ini_set('display_errors', 1);
@@ -96,6 +100,56 @@ if (!function_exists('validatePassword')) {
     function validatePassword($password) {
         // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
         return preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/', $password);
+    }
+}
+
+// Session validation function
+if (!function_exists('validateSession')) {
+    function validateSession() {
+        // Check if user is logged in
+        if (!isset($_SESSION['user_id'])) {
+            header("Location: login.php?error=not_logged_in");
+            exit();
+        }
+        
+        // Initialize session security on first load
+        if (!isset($_SESSION['user_agent'])) {
+            $_SESSION['user_agent'] = $_SERVER['HTTP_USER_AGENT'];
+            $_SESSION['ip_address'] = $_SERVER['REMOTE_ADDR'];
+            $_SESSION['login_time'] = time();
+        }
+        
+        // Check session hijacking
+        if ($_SESSION['user_agent'] !== $_SERVER['HTTP_USER_AGENT']) {
+            session_destroy();
+            header("Location: login.php?error=session_invalid");
+            exit();
+        }
+        
+        // Check session timeout (30 minutes)
+        if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > 1800)) {
+            session_destroy();
+            header("Location: login.php?timeout=1");
+            exit();
+        }
+        
+        // Regenerate session ID periodically to prevent fixation
+        if (!isset($_SESSION['created'])) {
+            $_SESSION['created'] = time();
+        } else if (time() - $_SESSION['created'] > 1800) {
+            session_regenerate_id(true);
+            $_SESSION['created'] = time();
+        }
+        
+        // Update last activity time
+        $_SESSION['last_activity'] = time();
+    }
+}
+
+// Admin check function
+if (!function_exists('isAdminUser')) {
+    function isAdminUser() {
+        return isset($_SESSION['is_admin']) && $_SESSION['is_admin'];
     }
 }
 ?>

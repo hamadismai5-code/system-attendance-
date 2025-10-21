@@ -17,8 +17,9 @@ $stmt->close();
 if (!$is_admin) {
     die("Access denied. You are not an admin.");
 }
-// Chukua attendance zote
-$att_stmt = $conn->prepare("SELECT Name, Date, Time_in, Time_out FROM attendance ORDER BY Date DESC");
+// Chukua attendance za user current
+$att_stmt = $conn->prepare("SELECT name, date, time_in, time_out FROM attendance WHERE name = ? ORDER BY date DESC");
+$att_stmt->bind_param("s", $username);
 $att_stmt->execute();
 $att_stmt->bind_result($name, $date, $time_in, $time_out);
 $attendance_records = [];
@@ -223,8 +224,8 @@ $currentMonthKey = date('Y-m');
             overflow: hidden;
         }
         
-        .table-container th {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        .table-container th {    
+            background: linear-gradient(135deg, var(--dark), #1c2a49ff);
             color: var(--white);
             padding: 12px 15px;
             text-align: left;
@@ -319,7 +320,7 @@ $currentMonthKey = date('Y-m');
             <button class="menu-toggle" id="menuToggle">
               <i class='bx bx-menu'></i>
             </button>
-            <h1>Attendance Records</h1>
+            <h1>My Attendance Records</h1>
           </div>
           <div class="header-right">
             <div class="user-menu">

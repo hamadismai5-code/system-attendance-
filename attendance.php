@@ -74,8 +74,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Rest of your existing attendance.php code remains the same...
-// [KOPY THE REST OF YOUR ORIGINAL attendance.php CODE FROM LINE 65 TO END]
 // Fetch attendance log with pagination
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 10;
@@ -84,17 +82,17 @@ $offset = ($page - 1) * $limit;
 $current_user = $_SESSION['username'];
 
 $attendance_data = [];
-$count_stmt = $conn->prepare("SELECT COUNT(*) as total FROM attendance WHERE Name = ?");
+$count_stmt = $conn->prepare("SELECT COUNT(*) as total FROM attendance WHERE name = ?");
 $count_stmt->bind_param("s", $current_user);
 $count_stmt->execute();
 $total_records = $count_stmt->get_result()->fetch_assoc()['total'];
 $total_pages = ceil($total_records / $limit);
 $count_stmt->close();
 
-$att_stmt = $conn->prepare("SELECT Name, Department, Date, Time_in, Time_out 
+$att_stmt = $conn->prepare("SELECT name, department, date, time_in, time_out 
                            FROM attendance 
-                           WHERE Name = ? 
-                           ORDER BY Date DESC, Time_in DESC 
+                           WHERE name = ? 
+                           ORDER BY date DESC, time_in DESC 
                            LIMIT ? OFFSET ?");
 $att_stmt->bind_param("sii", $current_user, $limit, $offset);
 $att_stmt->execute();
@@ -160,11 +158,11 @@ $att_stmt->close();
           <tbody>
             <?php foreach ($attendance_data as $record): ?>
             <tr>
-                <td><?php echo htmlspecialchars($record['Name']); ?></td>
-                <td><?php echo htmlspecialchars($record['Department']); ?></td>
-                <td><?php echo htmlspecialchars($record['Date']); ?></td>
-                <td><?php echo htmlspecialchars($record['Time_in']); ?></td>
-                <td><?php echo htmlspecialchars($record['Time_out'] ?: '--'); ?></td>
+                <td><?php echo htmlspecialchars($record['name']); ?></td>
+                <td><?php echo htmlspecialchars($record['department']); ?></td>
+                <td><?php echo htmlspecialchars($record['date']); ?></td>
+                <td><?php echo htmlspecialchars($record['time_in']); ?></td>
+                <td><?php echo htmlspecialchars($record['time_out'] ?: '--'); ?></td>
             </tr>
             <?php endforeach; ?>
           </tbody>

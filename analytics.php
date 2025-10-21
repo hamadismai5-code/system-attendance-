@@ -64,10 +64,11 @@ $analytics['average_hours'] = $result->fetch_all(MYSQLI_ASSOC);
         
         .analytics-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            grid-template-columns: 1fr;
             gap: 20px;
             margin-top: 20px;
-        }
+            max-width: 100%;
+       }
         
         .analytics-card {
             background: var(--white);
@@ -75,11 +76,15 @@ $analytics['average_hours'] = $result->fetch_all(MYSQLI_ASSOC);
             box-shadow: var(--shadow);
             padding: 25px;
             transition: var(--transition);
+            overflow-x: auto;
+            max-width: 100%;
+            margin-bottom: 20px;
         }
         
         .analytics-card:hover {
             transform: translateY(-3px);
             box-shadow: 0 8px 25px rgba(99,102,241,0.15);
+            cursor: pointer;
         }
         
         .analytics-card h3 {
@@ -88,6 +93,9 @@ $analytics['average_hours'] = $result->fetch_all(MYSQLI_ASSOC);
             padding-bottom: 15px;
             border-bottom: 2px solid var(--primary);
             font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
         .analytics-table {
@@ -96,7 +104,7 @@ $analytics['average_hours'] = $result->fetch_all(MYSQLI_ASSOC);
         }
         
         .analytics-table th {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            background: linear-gradient(135deg, var(--dark), #1c2a49ff);
             color: var(--white);
             padding: 12px 15px;
             text-align: left;

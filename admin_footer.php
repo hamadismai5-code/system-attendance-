@@ -43,22 +43,50 @@
         const weeklyChart = new Chart(weeklyCtx, {
           type: 'line',
           data: {
-            labels: [<?php echo isset($weekly_trend) ? implode(',', array_map(function($item) { return "'" . date('D', strtotime($item['day'])) . "'"; }, $weekly_trend)) : ''; ?>],
-            datasets: [{
-              label: 'Users Present',
-              data: [<?php echo isset($weekly_trend) ? implode(',', array_column($weekly_trend, 'users')) : ''; ?>],
-              borderColor: 'rgb(54, 162, 235)',
-              backgroundColor: 'rgba(54, 162, 235, 0.1)',
-              tension: 0.3,
-              fill: true
-            }]
+            labels: <?php echo json_encode($chart_labels ?? []); ?>,
+            datasets: [
+              {
+                label: 'Present Users',
+                data: <?php echo json_encode($chart_present ?? []); ?>,
+                borderColor: 'var(--primary)',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                tension: 0.3,
+                fill: true,
+                yAxisID: 'y'
+              },
+              {
+                label: 'Late Arrivals',
+                data: <?php echo json_encode($chart_late ?? []); ?>,
+                borderColor: 'var(--warning)',
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                tension: 0.3,
+                fill: false,
+                yAxisID: 'y'
+              },
+              {
+                label: 'Early Departures',
+                data: <?php echo json_encode($chart_early ?? []); ?>,
+                borderColor: 'var(--accent)',
+                backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                tension: 0.3,
+                fill: false,
+                yAxisID: 'y'
+              }
+            ]
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
               legend: { position: 'top' },
-              title: { display: true, text: 'Last 7 Days Attendance' }
+              title: { display: false },
+              tooltip: {
+                mode: 'index',
+                intersect: false,
+              }
+            },
+            scales: {
+              y: { beginAtZero: true, grace: '5%' }
             }
           }
         });
@@ -68,20 +96,47 @@
       if (deptChartCanvas) {
         const deptCtx = deptChartCanvas.getContext('2d');
         const deptChart = new Chart(deptCtx, {
-          type: 'doughnut',
+          type: 'bar',
           data: {
-            labels: [<?php echo isset($dept_stats) ? implode(',', array_map(function($item) { return "'" . addslashes($item['department']) . "'"; }, $dept_stats)) : ''; ?>],
-            datasets: [{
-              data: [<?php echo isset($dept_stats) ? implode(',', array_column($dept_stats, 'count')) : ''; ?>],
-              backgroundColor: ['#6366f1', '#06b6d4', '#fbbf24', '#10b981', '#ef4444', '#8b5cf6']
-            }]
+            labels: <?php echo json_encode(array_column($dept_stats, 'department_name')); ?>,
+            datasets: [
+              {
+                label: 'On-Time',
+                data: <?php echo json_encode(array_column($dept_stats, 'on_time_count')); ?>,
+                backgroundColor: 'var(--success)',
+              },
+              {
+                label: 'Late',
+                data: <?php echo json_encode(array_column($dept_stats, 'late_count')); ?>,
+                backgroundColor: 'var(--warning)',
+              }
+            ]
           },
           options: {
+            indexAxis: 'y', // This makes it a horizontal bar chart
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-              legend: { position: 'right' },
-              title: { display: true, text: 'Today by Department' }
+              legend: { 
+                position: 'top',
+                align: 'end'
+              },
+              title: { 
+                display: false, 
+                text: 'Department Punctuality (Last 30 Days)' 
+              },
+              tooltip: {
+                mode: 'index',
+                intersect: false,
+              },
+            },
+            scales: {
+              x: {
+                stacked: true,
+              },
+              y: {
+                stacked: true,
+              }
             }
           }
         });

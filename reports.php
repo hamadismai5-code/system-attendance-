@@ -101,7 +101,7 @@ $reports['user_summary'] = $result->fetch_all(MYSQLI_ASSOC);
         }
         
         .report-table th {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            background: linear-gradient(135deg, var(--dark), #1c2a49ff);
             color: var(--white);
             padding: 12px 15px;
             text-align: left;

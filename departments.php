@@ -150,6 +150,14 @@ if (isset($_GET['delete'])) {
             margin-bottom: 15px;
             opacity: 0.5;
         }
+
+         .department-table-container .department-table thead th { 
+            background: linear-gradient(135deg, var(--dark), #1c2a49ff);
+            color: var(--white);
+            padding: 12px 14px;
+            text-align: left;
+
+         }
     </style>
 </head>
 <body>

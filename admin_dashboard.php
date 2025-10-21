@@ -22,10 +22,18 @@ $stats = $stats_result->fetch_assoc();
 
 // Department stats - SECURE
 $dept_stats = [];
-$dept_stmt = $conn->prepare("SELECT d.name as department, COUNT(a.id) as count 
-                    FROM departments d 
-                    LEFT JOIN attendance a ON d.id = a.department AND a.date = CURDATE()
-                    GROUP BY d.id");
+$dept_stmt = $conn->prepare("
+    SELECT 
+        d.name as department_name,
+        SUM(CASE WHEN TIME(a.time_in) <= '09:00:00' THEN 1 ELSE 0 END) as on_time_count,
+        SUM(CASE WHEN TIME(a.time_in) > '09:00:00' THEN 1 ELSE 0 END) as late_count
+    FROM departments d
+    LEFT JOIN attendance a ON d.id = a.department AND a.date BETWEEN ? AND ?
+    GROUP BY d.id, d.name
+    HAVING on_time_count > 0 OR late_count > 0
+    ORDER BY department_name ASC
+");
+$dept_stmt->bind_param("ss", $start_date, $end_date);
 $dept_stmt->execute();
 $dept_result = $dept_stmt->get_result();
 $dept_stats = $dept_result->fetch_all(MYSQLI_ASSOC);
@@ -44,24 +52,52 @@ $recent_stmt->close();
 
 // Weekly trend - SECURE
 $weekly_trend = [];
-$weekly_stmt = $conn->prepare("SELECT DATE(date) as day, COUNT(DISTINCT name) as users 
-                      FROM attendance 
-                      WHERE date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-                      GROUP BY DATE(date)
-                      ORDER BY day ASC");
+$weekly_stmt = $conn->prepare("
+    SELECT
+        DATE(date) as day,
+        COUNT(DISTINCT name) as present_users,
+        COUNT(DISTINCT CASE WHEN TIME(time_in) > '09:00:00' THEN name END) as late_arrivals,
+        COUNT(DISTINCT CASE WHEN time_out IS NOT NULL AND TIME(time_out) < '17:00:00' THEN name END) as early_departures
+    FROM attendance
+    WHERE date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+    GROUP BY DATE(date)
+    ORDER BY day ASC
+");
 $weekly_stmt->execute();
 $weekly_result = $weekly_stmt->get_result();
 $weekly_trend = $weekly_result->fetch_all(MYSQLI_ASSOC);
 $weekly_stmt->close();
 
+// Prepare data for the new chart
+$chart_labels = array_map(fn($item) => date('D, M j', strtotime($item['day'])), $weekly_trend);
+$chart_present = array_column($weekly_trend, 'present_users');
+$chart_late = array_column($weekly_trend, 'late_arrivals');
+$chart_early = array_column($weekly_trend, 'early_departures');
+
 // Top performers - SECURE
 $top_performers = [];
-$top_stmt = $conn->prepare("SELECT name, COUNT(*) as attendance_count 
-                         FROM attendance 
-                         WHERE date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-                         GROUP BY name 
-                         ORDER BY attendance_count DESC 
-                         LIMIT 5");
+$top_stmt = $conn->prepare("
+    SELECT
+        u.username,
+        d.name as department_name,
+        COUNT(a.id) as days_present,
+        SUM(CASE WHEN TIME(a.time_in) > '09:00:00' THEN 1 ELSE 0 END) as late_days,
+        -- Performance Score: +10 for each day present, -5 for each late day.
+        (COUNT(a.id) * 10 - SUM(CASE WHEN TIME(a.time_in) > '09:00:00' THEN 1 ELSE 0 END) * 5) as performance_score
+    FROM
+        users u
+    JOIN
+        attendance a ON u.username = a.name
+    LEFT JOIN
+        departments d ON u.department = d.id
+    WHERE
+        a.date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+    GROUP BY
+        u.id, u.username, d.name
+    ORDER BY
+        performance_score DESC, late_days ASC
+    LIMIT 5
+");
 $top_stmt->execute();
 $top_result = $top_stmt->get_result();
 $top_performers = $top_result->fetch_all(MYSQLI_ASSOC);
@@ -92,6 +128,155 @@ $stats_result->free();
     <title>Admin Dashboard</title>
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <link rel="stylesheet" href="css/admin.css">
+    <style>
+        /* Enhanced Dashboard Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Default to single column for mobile */
+            gap: 24px;
+            margin-top: 24px;
+        }
+
+        /* Responsive grid for larger screens */
+        @media (min-width: 992px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .dashboard-grid .grid-col-span-2 {
+                grid-column: span 2;
+            }
+        }
+
+        /* Refined Dashboard Section/Card */
+        .dashboard-section {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .dashboard-section:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-header h3 {
+            font-size: 1.1rem;
+            color: var(--dark);
+            margin: 0;
+        }
+
+        .section-header a {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--primary);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: color 0.2s ease;
+        }
+
+        .section-header a:hover {
+            color: var(--primary-dark);
+        }
+
+        /* Improved Top Performers List */
+        .performers-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .performer-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: var(--light);
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
+        }
+
+        .performer-item:hover {
+            background: #e9ecef;
+        }
+
+        .performer-name {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .performer-count {
+            font-size: 0.9rem;
+            font-weight: 700;
+            background: var(--primary);
+            color: var(--white);
+            padding: 4px 10px;
+            border-radius: 16px;
+        }
+
+        /* Chart container fix */
+        .chart-container {
+            position: relative;
+            height: 300px; /* Give charts a fixed height */
+        }
+
+        /* Enhanced Punctuality Leaderboard */
+        .leaderboard-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            background: var(--light);
+            border-radius: 10px;
+            transition: background-color 0.2s ease;
+        }
+
+        .leaderboard-item:hover {
+            background-color: #e9ecef;
+        }
+
+        .leaderboard-rank {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--gray);
+            width: 30px;
+            text-align: center;
+        }
+        .leaderboard-rank.rank-1 { color: #d4af37; } /* Gold */
+        .leaderboard-rank.rank-2 { color: #c0c0c0; } /* Silver */
+        .leaderboard-rank.rank-3 { color: #cd7f32; } /* Bronze */
+
+        .leaderboard-info {
+            flex: 1;
+        }
+        .leaderboard-info .name { font-weight: 600; color: var(--dark); }
+        .leaderboard-info .department { font-size: 0.85rem; color: var(--gray); }
+
+        .leaderboard-score {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+    </style>
 </head>
 <body>
   <div class="admin-container">
@@ -177,8 +362,8 @@ $stats_result->free();
         </section>
         
         <!-- Charts Section -->
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
-          <section class="dashboard-section">
+        <div class="dashboard-grid">
+          <section class="dashboard-section grid-col-span-2">
             <div class="section-header">
               <h3>Weekly Attendance Trend</h3>
               <a href="analytics.php">View Details <i class='bx bx-right-arrow-alt'></i></a>
@@ -200,8 +385,8 @@ $stats_result->free();
         </div>
         
         <!-- Recent Attendance & Top Performers -->
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
-          <section class="dashboard-section">
+        <div class="dashboard-grid">
+          <section class="dashboard-section grid-col-span-2">
             <div class="section-header">
               <h3>Recent Attendance</h3>
               <a href="attendance.php">View All <i class='bx bx-right-arrow-alt'></i></a>
@@ -234,16 +419,31 @@ $stats_result->free();
           
           <section class="dashboard-section">
             <div class="section-header">
-              <h3>Top Performers</h3>
+              <h3>Punctuality Leaderboard</h3>
               <a href="reports.php">View Report <i class='bx bx-right-arrow-alt'></i></a>
             </div>
-            <div class="performers-list">
-              <?php foreach ($top_performers as $performer): ?>
-              <div class="performer-item">
-                <span class="performer-name"><?= htmlspecialchars($performer['name']) ?></span>
-                <span class="performer-count"><?= htmlspecialchars($performer['attendance_count']) ?> days</span>
+            <div class="leaderboard-list">
+              <?php 
+                $rank = 1; 
+                $rank_icons = ['bxs-medal', 'bxs-medal', 'bxs-medal'];
+                foreach ($top_performers as $performer): 
+              ?>
+              <div class="leaderboard-item">
+                <div class="leaderboard-rank rank-<?= $rank ?>">
+                  <i class='bx <?= $rank_icons[$rank-1] ?? 'bxs-star' ?>'></i>
+                </div>
+                <div class="leaderboard-info">
+                  <div class="name"><?= htmlspecialchars($performer['username']) ?></div>
+                  <div class="department"><?= htmlspecialchars($performer['department_name'] ?? 'N/A') ?></div>
+                </div>
+                <div class="leaderboard-score" title="Performance Score">
+                  <?= htmlspecialchars(round($performer['performance_score'])) ?>
+                </div>
               </div>
-              <?php endforeach; ?>
+              <?php 
+                $rank++;
+                endforeach; 
+              ?>
             </div>
           </section>
         </div>

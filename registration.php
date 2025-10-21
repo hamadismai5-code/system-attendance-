@@ -1,5 +1,5 @@
 <?php
-session_start(); // Needed for CSRF token
+session_start();
 require_once 'config.php';
 
 // Set CSRF token if not exists
@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-    $department = $_POST['department']; // kutoka select
+    $department_name = $_POST['department']; // kutoka select
 
     // Check username or email
     $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
@@ -26,17 +26,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($stmt->num_rows > 0) {
         $error = "Username or Email already exists!";
     } else {
-        // Insert user
-        $insert_stmt = $conn->prepare("INSERT INTO users (username, email, password, department) VALUES (?, ?, ?, ?)");
-        $insert_stmt->bind_param("ssss", $username, $email, $password, $department);
+        // Get department ID from name
+        $dept_stmt = $conn->prepare("SELECT id FROM departments WHERE name = ?");
+        $dept_stmt->bind_param("s", $department_name);
+        $dept_stmt->execute();
+        $dept_stmt->bind_result($department_id);
+        $dept_stmt->fetch();
+        $dept_stmt->close();
 
-        if ($insert_stmt->execute()) {
-            header("Location: login.php?msg=registered");
-            exit();
+        if (!$department_id) {
+            $error = "Invalid department selected.";
         } else {
-            $error = "Failed to register user.";
+            // Insert user
+            $insert_stmt = $conn->prepare("INSERT INTO users (username, email, password, department) VALUES (?, ?, ?, ?)");
+            $insert_stmt->bind_param("sssi", $username, $email, $password, $department_id);
+
+            if ($insert_stmt->execute()) {
+                header("Location: login.php?msg=registered");
+                exit();
+            } else {
+                $error = "Failed to register user.";
+            }
+            $insert_stmt->close();
         }
-        $insert_stmt->close();
     }
     }
     $stmt->close();
@@ -207,18 +219,11 @@ body{
     top: 50%;
     transform: translateY(-50%);
     font-size: 20px;
-    color: #0e0d0dff;
+    color: #fff;
     opacity: 0.8;
     pointer-events: none;
     transition: color 0.3s ease;
     z-index: 3;
-}
-
-/* Password toggle icon styles */
-.input-box .toggle-password {
-    cursor: pointer;
-    pointer-events: auto;
-    z-index: 4;
 }
 
 .input-box input:focus + i,
