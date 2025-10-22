@@ -40,37 +40,43 @@
       const weeklyChartCanvas = document.getElementById('weeklyTrendChart');
       if (weeklyChartCanvas) {
         const weeklyCtx = weeklyChartCanvas.getContext('2d');
+
+        // Gradient for the bar chart
+        const gradient = weeklyCtx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.8)');
+        gradient.addColorStop(1, 'rgba(99, 102, 241, 0.2)');
+
         const weeklyChart = new Chart(weeklyCtx, {
-          type: 'line',
+          type: 'bar', // Change chart type to bar
           data: {
             labels: <?php echo json_encode($chart_labels ?? []); ?>,
             datasets: [
               {
-                label: 'Present Users',
-                data: <?php echo json_encode($chart_present ?? []); ?>,
-                borderColor: 'var(--primary)',
-                backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                tension: 0.3,
-                fill: true,
-                yAxisID: 'y'
+                label: 'On-Time Arrivals',
+                data: <?php echo json_encode($chart_on_time ?? []); ?>,
+                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 1,
+                borderRadius: 4,
+                hoverBackgroundColor: 'rgba(59, 130, 246, 0.9)',
               },
               {
                 label: 'Late Arrivals',
                 data: <?php echo json_encode($chart_late ?? []); ?>,
-                borderColor: 'var(--warning)',
-                backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                tension: 0.3,
-                fill: false,
-                yAxisID: 'y'
+                backgroundColor: 'rgba(245, 158, 11, 0.7)',
+                borderColor: 'rgba(245, 158, 11, 1)',
+                borderWidth: 1,
+                borderRadius: 4,
+                hoverBackgroundColor: 'rgba(245, 158, 11, 0.9)',
               },
               {
                 label: 'Early Departures',
                 data: <?php echo json_encode($chart_early ?? []); ?>,
-                borderColor: 'var(--accent)',
-                backgroundColor: 'rgba(249, 115, 22, 0.1)',
-                tension: 0.3,
-                fill: false,
-                yAxisID: 'y'
+                backgroundColor: 'rgba(239, 68, 68, 0.6)',
+                borderColor: 'rgba(239, 68, 68, 1)',
+                borderWidth: 1,
+                borderRadius: 4,
+                hoverBackgroundColor: 'rgba(239, 68, 68, 0.8)',
               }
             ]
           },
@@ -78,7 +84,7 @@
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-              legend: { position: 'top' },
+              legend: { position: 'top', align: 'end' },
               title: { display: false },
               tooltip: {
                 mode: 'index',
@@ -86,7 +92,18 @@
               }
             },
             scales: {
-              y: { beginAtZero: true, grace: '5%' }
+              x: {
+                stacked: false, // Set to false for grouped bars
+              },
+              y: { 
+                stacked: false, // Set to false for grouped bars
+                beginAtZero: true, 
+                grace: '10%',
+                grid: {
+                  color: '#e9ecef',
+                  drawBorder: false,
+                }
+              }
             }
           }
         });
@@ -103,17 +120,18 @@
               {
                 label: 'On-Time',
                 data: <?php echo json_encode(array_column($dept_stats, 'on_time_count')); ?>,
-                backgroundColor: 'var(--success)',
+                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                hoverBackgroundColor: 'rgba(59, 130, 246, 0.9)',
               },
               {
                 label: 'Late',
                 data: <?php echo json_encode(array_column($dept_stats, 'late_count')); ?>,
-                backgroundColor: 'var(--warning)',
+                backgroundColor: 'rgba(245, 158, 11, 0.7)',
+                hoverBackgroundColor: 'rgba(245, 158, 11, 0.9)',
               }
             ]
           },
           options: {
-            indexAxis: 'y', // This makes it a horizontal bar chart
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
@@ -132,10 +150,12 @@
             },
             scales: {
               x: {
-                stacked: true,
+                stacked: false,
               },
               y: {
-                stacked: true,
+                stacked: false,
+                beginAtZero: true,
+                grace: '10%'
               }
             }
           }

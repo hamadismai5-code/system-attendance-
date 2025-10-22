@@ -24,8 +24,9 @@ $end_date = validateDate($end_date) ? $end_date : date('Y-m-d');
 $stats_stmt = $conn->prepare("SELECT 
     (SELECT COUNT(*) FROM users) as total_users,
     (SELECT COUNT(*) FROM attendance WHERE date BETWEEN ? AND ?) as total_records,
-    (SELECT COUNT(*) FROM attendance WHERE date = CURDATE()) as today_records,
-    (SELECT COUNT(DISTINCT name) FROM attendance WHERE date = CURDATE()) as present_today
+    (SELECT COUNT(DISTINCT name) FROM attendance WHERE date = CURDATE()) as present_today,
+    (SELECT COUNT(DISTINCT name) FROM attendance WHERE date = CURDATE() AND TIME(time_in) <= '09:00:00') as on_time_today,
+    (SELECT COUNT(DISTINCT name) FROM attendance WHERE date = CURDATE() AND TIME(time_in) > '09:00:00') as late_today
 ");
 $stats_stmt->bind_param("ss", $start_date, $end_date);
 $stats_stmt->execute();
@@ -70,7 +71,7 @@ $weekly_trend = [];
 $weekly_stmt = $conn->prepare("
     SELECT
         DATE(date) as day,
-        COUNT(DISTINCT name) as present_users,
+        COUNT(DISTINCT CASE WHEN TIME(time_in) <= '09:00:00' THEN name END) as on_time_arrivals,
         COUNT(DISTINCT CASE WHEN TIME(time_in) > '09:00:00' THEN name END) as late_arrivals,
         COUNT(DISTINCT CASE WHEN time_out IS NOT NULL AND TIME(time_out) < '17:00:00' THEN name END) as early_departures
     FROM attendance
@@ -86,7 +87,7 @@ $weekly_stmt->close();
 
 // Prepare data for the new chart
 $chart_labels = array_map(fn($item) => date('D, M j', strtotime($item['day'])), $weekly_trend);
-$chart_present = array_column($weekly_trend, 'present_users');
+$chart_on_time = array_column($weekly_trend, 'on_time_arrivals');
 $chart_late = array_column($weekly_trend, 'late_arrivals');
 $chart_early = array_column($weekly_trend, 'early_departures');
 
@@ -404,18 +405,10 @@ $notif_stmt->close();
         <!-- Stats Cards -->
         <section class="admin-stats">
           <div class="stat-card">
-            <div class="stat-icon blue"><i class='bx bxs-user'></i></div>
+            <div class="stat-icon blue"><i class='bx bxs-group'></i></div>
             <div class="stat-info">
               <h3>Total Users</h3>
               <p><?php echo htmlspecialchars($stats['total_users']); ?></p>
-            </div>
-          </div>
-          
-          <div class="stat-card">
-            <div class="stat-icon green"><i class='bx bxs-time-five'></i></div>
-            <div class="stat-info">
-              <h3>Total Records</h3>
-              <p><?php echo htmlspecialchars($stats['total_records']); ?></p>
             </div>
           </div>
           
@@ -428,10 +421,18 @@ $notif_stmt->close();
           </div>
           
           <div class="stat-card">
-            <div class="stat-icon red"><i class='bx bxs-chart'></i></div>
+            <div class="stat-icon green"><i class='bx bxs-user-check'></i></div>
             <div class="stat-info">
-              <h3>Today's Records</h3>
-              <p><?php echo htmlspecialchars($stats['today_records']); ?></p>
+              <h3>On Time Today</h3>
+              <p><?php echo htmlspecialchars($stats['on_time_today']); ?></p>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon red"><i class='bx bxs-user-x'></i></div>
+            <div class="stat-info">
+              <h3>Late Today</h3>
+              <p><?php echo htmlspecialchars($stats['late_today']); ?></p>
             </div>
           </div>
         </section>
@@ -500,7 +501,7 @@ $notif_stmt->close();
             <div class="leaderboard-list">
               <?php 
                 $rank = 1; 
-                $rank_icons = ['bxs-medal', 'bxs-medal', 'bxs-medal'];
+                $rank_icons = ['bxs-trophy', 'bxs-medal', 'bxs-medal'];
                 foreach ($top_performers as $performer): 
               ?>
               <div class="leaderboard-item">
