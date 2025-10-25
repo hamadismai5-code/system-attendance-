@@ -175,10 +175,16 @@ if (isset($_GET['token'])) {
         top: 50%;
         transform: translateY(-50%);
         font-size: 20px;
-        color: #fff;
+        color: #0f0f0fff;
         opacity: 0.8;
         pointer-events: none;
         transition: color 0.3s ease;
+    }
+    
+    /* Password toggle icon styles */
+    .input-box .toggle-password {
+        cursor: pointer;
+        pointer-events: auto;
     }
 
     .wrapper .btn {
@@ -282,13 +288,13 @@ if (isset($_GET['token'])) {
     <form method="POST" action="reset_password.php?token=<?php echo htmlspecialchars($_GET['token']); ?>" id="reset-form">
       <input type="hidden" name="csrf_token" value="<?php echo generateCsrfToken(); ?>">
       <div class="input-box">
-        <input type="password" name="password" id="password" placeholder="New Password" required />
-        <i class='bx bxs-lock-alt'></i>
+        <input type="password" id="password" name="password" placeholder="New Password" required />
+        <i class='bx bx-hide toggle-password' id="togglePassword"></i>
         <div class="password-strength" id="password-strength"></div>
       </div>
       <div class="input-box">
-        <input type="password" name="confirm_password" placeholder="Confirm Password" required />
-        <i class='bx bxs-lock-alt'></i>
+        <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm Password" required />
+        <i class='bx bx-hide toggle-password' id="toggleConfirmPassword"></i>
       </div>
       <button type="submit" class="btn">Reset Password</button>
     </form>
@@ -297,6 +303,26 @@ if (isset($_GET['token'])) {
   </div>
   
   <script>
+    // Password visibility toggle
+    function setupPasswordToggle(toggleId, passwordId) {
+        const toggle = document.getElementById(toggleId);
+        const passwordInput = document.getElementById(passwordId);
+
+        if (toggle && passwordInput) {
+            toggle.addEventListener('click', function() {
+                // Toggle the type attribute
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                
+                // Toggle the icon
+                this.classList.toggle('bx-hide');
+                this.classList.toggle('bx-show');
+            });
+        }
+    }
+    setupPasswordToggle('togglePassword', 'password');
+    setupPasswordToggle('toggleConfirmPassword', 'confirm_password');
+
     // Password strength meter
     document.getElementById('password').addEventListener('input', function() {
       const password = this.value;
@@ -336,7 +362,7 @@ if (isset($_GET['token'])) {
     // Form validation
     document.getElementById('reset-form').addEventListener('submit', function(e) {
       const password = document.getElementById('password').value;
-      const confirmPassword = document.querySelector('input[name="confirm_password"]').value;
+      const confirmPassword = document.getElementById('confirm_password').value;
       
       if (password !== confirmPassword) {
         e.preventDefault();

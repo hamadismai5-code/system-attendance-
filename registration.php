@@ -219,7 +219,7 @@ body{
     top: 50%;
     transform: translateY(-50%);
     font-size: 20px;
-    color: #fff;
+    color: #0c0c0cff;
     opacity: 0.8;
     pointer-events: none;
     transition: color 0.3s ease;
@@ -234,6 +234,12 @@ body{
 
 .input-box input::placeholder{
     color: rgba(255, 255, 255, 0.7);
+}
+
+/* Password toggle icon styles */
+.input-box .toggle-password {
+    cursor: pointer;
+    pointer-events: auto;
 }
 
 /* Select placeholder styling */
